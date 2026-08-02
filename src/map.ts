@@ -3,9 +3,15 @@ import type { Region, ThreatEvent } from "./types";
 import { TOPONYM_CENTERS } from "./data/toponym-centers";
 import { LAUNCH_CENTERS, SPEED_KMH, TYPE_COLOR, TYPE_ICON, TYPE_DUR } from "./data/launch-points";
 
+// Джерела контурів областей. jsdelivr = стабільний CDN-проксі github (без тротлінгу raw).
+// "/ukraine.geojson" — локальний файл з public/, якщо покладеш (пріоритет 1, миттєво, оффлайн).
 const GEOJSON_URLS = [
-  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "/ukraine.geojson",
+  "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "https://cdn.jsdelivr.net/gh/codeforgermany/click_that_hood@main/public/data/ukraine.geojson",
   "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
   "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/ukraine.geojson",
 ];
 
@@ -322,13 +328,13 @@ export class ThreatMap {
     }
   }
 
-  // Пріоритет: ТРИВОГА > покриття > тиша. Тривога червоним для ВСІХ областей, навіть поза покриттям.
+  // Пріоритет: ТРИВОГА > покриття > тиша. Червоним — ЦІЛИЙ полігон області, для ВСІХ 25.
   private styleFor(key: string | null): L.PathOptions {
     const r = key ? this.regionMap.get(key) : undefined;
     const alert = r?.alert ?? false;
     const active = r?.active ?? false;
-    if (alert)   return { color: "#ff6b6b", weight: active ? 2.5 : 2, fillColor: "#ff2d2d", fillOpacity: active ? 0.55 : 0.42 };
-    if (active)  return { color: "#2ee6a6", weight: 1.5, fillColor: "#2ee6a6", fillOpacity: 0.22 };
+    if (alert)  return { color: "#ff8a8a", weight: active ? 2.5 : 2, fillColor: "#ff2d2d", fillOpacity: active ? 0.58 : 0.45 };
+    if (active) return { color: "#2ee6a6", weight: 1.5, fillColor: "#2ee6a6", fillOpacity: 0.22 };
     return { color: "#33455f", weight: 1, fillColor: "#16223a", fillOpacity: 0.42 };
   }
 
@@ -336,7 +342,7 @@ export class ThreatMap {
     const r = this.regionMap.get(key);
     const alert = r?.alert ?? false;
     const active = r?.active ?? false;
-    if (alert)  return { color: "#ff6b6b", fillColor: "#ff2d2d", fillOpacity: active ? 0.7 : 0.55, opacity: 1 };
+    if (alert)  return { color: "#ff8a8a", fillColor: "#ff2d2d", fillOpacity: active ? 0.7 : 0.55, opacity: 1 };
     if (active) return { color: "#2ee6a6", fillColor: "#2ee6a6", fillOpacity: 0.45, opacity: 1 };
     return { color: "#33455f", fillColor: "#16223a", fillOpacity: 0.5, opacity: 0.7 };
   }
@@ -348,7 +354,6 @@ export class ThreatMap {
         m.setStyle(this.markerStyle(key));
         const r = this.regionMap.get(key);
         const el = (m as any)._path as SVGElement | undefined;
-        // пульс при тривозі — для будь-якої області, не лише активної
         if (el) el.classList.toggle("pulse", !!r?.alert);
       }
     }
