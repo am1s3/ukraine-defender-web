@@ -27,7 +27,6 @@ body {
   overflow: hidden;
 }
 
-/* ФІКС: прибираємо прямокутний focus-ring навколо полігона після кліку */
 .leaflet-interactive:focus,
 .leaflet-interactive:focus-visible,
 svg path:focus,
@@ -144,6 +143,26 @@ svg path:focus-visible { outline: none !important; }
 .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
 .loading__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); animation: blink 0.8s infinite; }
 
+/* жива плашка помилки замість вічного спіннера */
+.ev-error {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 12px;
+  background:
+    linear-gradient(rgba(255,176,32,0.05) 1px, transparent 1px) 0 0 / 100% 18px,
+    rgba(255,176,32,0.07);
+  border: 1px solid rgba(255,176,32,0.4);
+  border-left: 3px solid var(--amber);
+  animation: errIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+}
+.ev-error__dot {
+  width: 10px; height: 10px; border-radius: 50%; flex: none;
+  background: var(--amber); box-shadow: 0 0 10px var(--amber);
+  animation: blink 0.9s infinite;
+}
+.ev-error__title { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--amber); letter-spacing: 0.2px; }
+.ev-error__sub { margin-top: 4px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: 0.2px; }
+@keyframes errIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
 .ev-status {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 14px; border-radius: 10px; margin-bottom: 14px;
@@ -238,7 +257,6 @@ svg path:focus-visible { outline: none !important; }
 .queued__name { font-family: var(--font-display); font-size: 16px; color: var(--amber); margin-bottom: 12px; }
 .queued__text { color: var(--muted); font-size: 13px; line-height: 1.7; }
 
-/* ===== ОВЕРЛЕЙ ЗВІТУ ===== */
 .report-overlay {
   position: fixed; inset: 0; z-index: 2000;
   display: flex; align-items: center; justify-content: center;
@@ -246,10 +264,7 @@ svg path:focus-visible { outline: none !important; }
   transition: opacity 0.25s;
 }
 .report-overlay[data-open="true"] { pointer-events: auto; opacity: 1; }
-.report-overlay__backdrop {
-  position: absolute; inset: 0;
-  background: rgba(5,9,18,0.78); backdrop-filter: blur(8px);
-}
+.report-overlay__backdrop { position: absolute; inset: 0; background: rgba(5,9,18,0.78); backdrop-filter: blur(8px); }
 .report {
   position: relative; z-index: 1;
   width: min(560px, 100%); max-height: 90vh; overflow-y: auto;
@@ -283,10 +298,7 @@ svg path:focus-visible { outline: none !important; }
 .rp-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
 .rp-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 6px; }
-.rp-counter {
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px 8px; text-align: center;
-}
+.rp-counter { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 8px; text-align: center; }
 .rp-counter__n { display: block; font-family: var(--font-mono); font-size: 26px; font-weight: 600; color: #fff; line-height: 1; }
 .rp-counter__l { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.3px; line-height: 1.3; }
 
@@ -303,18 +315,12 @@ svg path:focus-visible { outline: none !important; }
 .rp-bar__n { font-family: var(--font-mono); font-size: 13px; font-weight: 600; width: 26px; text-align: right; }
 
 .rp-dirs { display: flex; flex-wrap: wrap; gap: 7px; }
-.rp-dir {
-  font-family: var(--font-mono); font-size: 11px; color: var(--text);
-  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px;
-}
+.rp-dir { font-family: var(--font-mono); font-size: 11px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; }
 .rp-dir b { color: var(--cyan); margin-left: 5px; }
 
 .rp-alerts { display: flex; flex-wrap: wrap; gap: 7px; }
 .rp-alerts--none { color: var(--green); font-family: var(--font-mono); font-size: 12px; }
-.rp-alert-chip {
-  font-family: var(--font-mono); font-size: 11px; color: #fff;
-  background: rgba(255,59,59,0.16); border: 1px solid rgba(255,59,59,0.5); border-radius: 999px; padding: 5px 11px;
-}
+.rp-alert-chip { font-family: var(--font-mono); font-size: 11px; color: #fff; background: rgba(255,59,59,0.16); border: 1px solid rgba(255,59,59,0.5); border-radius: 999px; padding: 5px 11px; }
 
 .rp-foot { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
 .rp-foot__src { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); flex: 1; line-height: 1.4; }
