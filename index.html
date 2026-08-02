@@ -2,7 +2,8 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
   <title>Ukraine Defender — моніторинг повітряних загроз</title>
   <meta name="description" content="Система моніторингу повітряних загроз по всій Україні. Наразі активний регіон: Київ та область." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,6 +40,7 @@
 
   <aside class="drawer" id="drawer" data-open="false">
     <div class="drawer__head">
+      <span class="drawer__grab" aria-hidden="true"></span>
       <div>
         <h2 class="drawer__title" id="drawerTitle">Київська область</h2>
         <span class="drawer__status" id="drawerStatus">—</span>
@@ -50,11 +52,88 @@
     </div>
   </aside>
 
+  <!-- НИЖНІЙ TAB-BAR (лише мобільний) -->
+  <nav class="tabbar" aria-label="навігація">
+    <button class="tabbar__btn tabbar__btn--accent" data-nav="report">
+      <span class="tabbar__ico">📊</span><span class="tabbar__lbl">Звіт</span>
+    </button>
+    <button class="tabbar__btn" data-nav="about">
+      <span class="tabbar__ico">🛡️</span><span class="tabbar__lbl">Про нас</span>
+    </button>
+    <button class="tabbar__btn" data-nav="donate">
+      <span class="tabbar__ico">💛</span><span class="tabbar__lbl">Донат</span>
+    </button>
+    <button class="tabbar__btn" data-nav="support">
+      <span class="tabbar__ico">📡</span><span class="tabbar__lbl">Підтримка</span>
+    </button>
+  </nav>
+
   <!-- ОВЕРЛЕЙ ЗВІТУ -->
   <div class="report-overlay" id="reportOverlay" data-open="false">
     <div class="report-overlay__backdrop"></div>
     <div class="report" id="reportCard"></div>
   </div>
+
+  <!-- ОВЕРЛЕЙ «ПРО НАС» -->
+  <div class="about-overlay" id="aboutOverlay" data-open="false">
+    <div class="about-overlay__backdrop" data-nav-close="about"></div>
+    <div class="about" role="dialog" aria-label="про проєкт">
+      <div class="about__head">
+        <div class="about__brand"><span class="about__shield">🛡️</span><span class="about__name">UKRAINE DEFENDER</span></div>
+        <button class="about__close" data-nav-close="about">✕</button>
+      </div>
+      <p class="about__lead">Національна система моніторингу повітряних загроз у реальному часі. Ми читаємо відкриті канали спостереження, збираємо підтвердження з незалежних джерел і показуємо єдину картину по всій Україні.</p>
+
+      <div class="about__grid">
+        <div class="about__card">
+          <div class="about__card-ico">🛰️</div>
+          <div class="about__card-t">Агрегація каналів</div>
+          <div class="about__card-d">Універсальні монітори по країні та регіональні канали — в одному потоці.</div>
+        </div>
+        <div class="about__card">
+          <div class="about__card-ico">🤝</div>
+          <div class="about__card-t">Consensus</div>
+          <div class="about__card-d">Подія вагомий лише коли її підтверджують кілька незалежних джерел.</div>
+        </div>
+        <div class="about__card">
+          <div class="about__card-ico">🧠</div>
+          <div class="about__card-t">Regex + AI</div>
+          <div class="about__card-d">Швидкий шар правил + нейромережа на складних повідомленнях і суржику.</div>
+        </div>
+        <div class="about__card">
+          <div class="about__card-ico">🗄️</div>
+          <div class="about__card-t">Пам'ять</div>
+          <div class="about__card-d">Кожна подія пишеться в базу — це і звіт за ніч, і датасет на майбутнє.</div>
+        </div>
+      </div>
+
+      <div class="about__block">
+        <div class="about__block-t">Покриття регіонів</div>
+        <div class="about__coverage">
+          <div class="about__cov-bar"><span class="about__cov-fill"></span></div>
+          <span class="about__cov-n">1 / 25</span>
+        </div>
+        <div class="about__cov-note">Активний моніторинг: <b>Київ та область</b>. Решта регіонів підсвічуються під час тривоги й підключаються по черзі.</div>
+      </div>
+
+      <div class="about__block">
+        <div class="about__block-t">Джерела сигналу</div>
+        <ul class="about__src">
+          <li><span class="about__src-tag about__src-tag--g">універсал</span> @aerisrimor · @war_monitor</li>
+          <li><span class="about__src-tag about__src-tag--r">київ</span> @varta_raketa · @nebo_raketa · @kievreal1</li>
+          <li><span class="about__src-tag about__src-tag--v">верифікатор</span> @pechersk_info_official</li>
+        </ul>
+      </div>
+
+      <div class="about__disclaimer">
+        <span class="about__disclaimer-ico">⚠️</span>
+        <span>Це цивільний агрегатор відкритих даних, а не офіційна система сповіщення. Не замінює повітряну тривогу та офіційні канали. Рішення приймайте за сукупністю джерел.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ТОСТИ -->
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
