@@ -2,7 +2,7 @@ import "./style.css";
 import { fetchAlerts, fetchEvents } from "./api";
 import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
-import type { AlertResponse } from "./types";
+import type { AlertResponse, ThreatEvent } from "./types";
 
 const APP_VERSION = "v1.0.0";
 
@@ -15,12 +15,12 @@ const map = new ThreatMap("map", (key) => {
   const r = lastData?.regions.find((x) => x.key === key);
   if (r) {
     drawer.open(r);
-    if (r.active) refreshEvents();
+    if (r.active) pollEvents();
   }
 });
 
 let lastData: AlertResponse | null = null;
-let eventsTimer: number | null = null;
+let lastEvents: ThreatEvent[] = [];
 
 // --- Бейдж версії ---
 let lastOkAt = 0;
@@ -33,11 +33,7 @@ elApp.textContent = APP_VERSION;
 
 function renderBadge() {
   elApi.textContent = `API ${currentApiVersion}`;
-  if (!lastOkAt) {
-    elBadge.dataset.state = "dead";
-    elAge.textContent = "очікування…";
-    return;
-  }
+  if (!lastOkAt) { elBadge.dataset.state = "dead"; elAge.textContent = "очікування…"; return; }
   const sec = Math.floor((Date.now() - lastOkAt) / 1000);
   elAge.textContent = sec < 2 ? "оновлено щойно" : `оновлено ${sec}с тому`;
   elBadge.dataset.state = sec > 45 ? "dead" : sec > 20 ? "stale" : "live";
@@ -67,22 +63,15 @@ function updateStatusStrip(data: AlertResponse) {
   coverage.textContent = `ПОКРИТТЯ 1/25`;
 }
 
-async function refreshEvents() {
-  if (!drawer.isOpen()) return;
-  const key = drawer.currentKey();
-  const region = key === "kyiv_city" || key === "kyiv_oblast" ? "kyiv" : "kyiv";
+// Глобальний poll подій: годує і карту (траєкторії) і шторку (стрічку)
+async function pollEvents() {
   try {
-    const data = await fetchEvents(region);
-    drawer.setEvents(data.events);
+    const data = await fetchEvents("kyiv");
+    lastEvents = data.events;
+    map.setTrajectories(lastEvents);
+    if (drawer.isOpen()) drawer.setEvents(lastEvents);
   } catch (e) {
     console.error("events failed", e);
-  }
-}
-
-function syncEventsLoop() {
-  if (eventsTimer) { clearInterval(eventsTimer); eventsTimer = null; }
-  if (drawer.isOpen()) {
-    eventsTimer = window.setInterval(refreshEvents, 10000);
   }
 }
 
@@ -96,25 +85,17 @@ async function poll() {
     map.render(data.regions);
     updateStatusStrip(data);
 
-    // ВАЖЛИВО: НЕ викликаємо drawer.open() повторно — лише оновлюємо шапку,
-    // щоб не скидати стрічку/фільтр/розкриті джерела кожні 5 секунд.
     const openKey = drawer.currentKey();
     if (openKey) {
       const r = data.regions.find((x) => x.key === openKey);
-      if (r) {
-        drawer.updateRegion(r);
-        if (r.active) refreshEvents();
-      }
+      if (r) drawer.updateRegion(r);
     }
   } catch (e) {
     console.error("poll failed", e);
   }
 }
 
-const origOpen = drawer.open.bind(drawer);
-drawer.open = (r) => { origOpen(r); syncEventsLoop(); };
-const origClose = drawer.close.bind(drawer);
-drawer.close = () => { origClose(); syncEventsLoop(); };
-
 poll();
+pollEvents();
 setInterval(poll, 5000);
+setInterval(pollEvents, 12000);
