@@ -4,7 +4,6 @@ import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
 import type { AlertResponse } from "./types";
 
-// Версія фронту (одна правда — сюди і в бейдж)
 const APP_VERSION = "v1.0.0";
 
 const drawer = new Drawer({
@@ -23,7 +22,7 @@ const map = new ThreatMap("map", (key) => {
 let lastData: AlertResponse | null = null;
 let eventsTimer: number | null = null;
 
-// --- Бейдж версії: стан з'єднання ---
+// --- Бейдж версії ---
 let lastOkAt = 0;
 let currentApiVersion = "—";
 const elBadge = document.getElementById("verBadge")!;
@@ -96,17 +95,19 @@ async function poll() {
     renderBadge();
     map.render(data.regions);
     updateStatusStrip(data);
+
+    // ВАЖЛИВО: НЕ викликаємо drawer.open() повторно — лише оновлюємо шапку,
+    // щоб не скидати стрічку/фільтр/розкриті джерела кожні 5 секунд.
     const openKey = drawer.currentKey();
     if (openKey) {
       const r = data.regions.find((x) => x.key === openKey);
       if (r) {
-        drawer.open(r);
+        drawer.updateRegion(r);
         if (r.active) refreshEvents();
       }
     }
   } catch (e) {
     console.error("poll failed", e);
-    // lastOkAt не чіпаємо — тикер сам покаже старіння з'єднання
   }
 }
 
