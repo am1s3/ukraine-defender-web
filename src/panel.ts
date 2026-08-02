@@ -166,7 +166,7 @@ export class Drawer {
         : `Тривога активна — деталі цілей зчитуються з каналів. Слідкуй за стрічкою.`;
       list = `<div class="ev-empty">${hint}</div>`;
     } else {
-      list = `<div class="ev-list">${visible.map((e, i) => this.rowHtml(e, i)).join("")}</div>`;
+      list = `<div class="ev-list">${visible.map((e) => this.rowHtml(e)).join("")}</div>`;
     }
 
     this.body.innerHTML = head + chips + list;
@@ -178,7 +178,7 @@ export class Drawer {
     return `${e.threat_type}|${e.toponym_key ?? "_"}|${e.source.id}`;
   }
 
-  private rowHtml(e: ThreatEvent, i: number): string {
+  private rowHtml(e: ThreatEvent): string {
     const meta = TYPE_META[e.threat_type];
     const key = this.eventKey(e);
     const isNew = !this.prevKeys.has(key);
