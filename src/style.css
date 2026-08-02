@@ -38,7 +38,6 @@ body {
 svg path:focus,
 svg path:focus-visible { outline: none !important; }
 
-/* зсуваємо контролі Leaflet під шапку (фікс невидимого зуму/тумблера) */
 .leaflet-top { top: calc(var(--header-h) + 8px) !important; }
 
 /* ===== ШАПКА ===== */
@@ -51,7 +50,12 @@ svg path:focus-visible { outline: none !important; }
   backdrop-filter: blur(8px);
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand__shield { font-size: 22px; filter: drop-shadow(0 0 6px rgba(53,196,255,0.4)); }
+.brand__shield { display: inline-flex; align-items: center; line-height: 0; }
+.brand__shield svg { width: 24px; height: 29px; display: block; animation: shieldGlow 3.4s ease-in-out infinite; }
+@keyframes shieldGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(53,196,255,0.30)); }
+  50%      { filter: drop-shadow(0 0 9px rgba(53,196,255,0.62)); }
+}
 .brand__name {
   font-family: var(--font-display); font-weight: 800;
   font-size: 17px; letter-spacing: 1.5px;
@@ -254,7 +258,6 @@ svg path:focus-visible { outline: none !important; }
 .queued__name { font-family: var(--font-display); font-size: 16px; color: var(--amber); margin-bottom: 12px; }
 .queued__text { color: var(--muted); font-size: 13px; line-height: 1.7; }
 
-/* hover-ефекти лише там де є справжній hover (на тач не залипають) */
 @media (hover: hover) {
   .ev-row:hover { border-color: var(--accent); transform: translateX(-2px); box-shadow: 0 6px 22px rgba(0,0,0,0.4), inset 0 0 0 1px var(--accent); }
   .ev-src:hover { background: rgba(53,196,255,0.08); }
@@ -327,7 +330,8 @@ svg path:focus-visible { outline: none !important; }
 .about::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
 .about__head { display: flex; align-items: center; justify-content: space-between; }
 .about__brand { display: flex; align-items: center; gap: 9px; }
-.about__shield { font-size: 20px; filter: drop-shadow(0 0 6px rgba(255,215,0,0.4)); }
+.about__shield { display: inline-flex; align-items: center; line-height: 0; }
+.about__shield svg { width: 22px; height: 26px; display: block; filter: drop-shadow(0 0 6px rgba(255,215,0,0.4)); }
 .about__name { font-family: var(--font-display); font-weight: 800; font-size: 14px; letter-spacing: 1.5px; background: linear-gradient(90deg, #35c4ff, #ffd700); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .about__close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
 .about__close:hover { color: var(--text); }
@@ -366,25 +370,22 @@ svg path:focus-visible { outline: none !important; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes toastOut { to { opacity: 0; transform: translateY(10px) scale(0.96); } }
 
-/* ===== TAB-BAR (прихований на десктопі) ===== */
+/* ===== TAB-BAR ===== */
 .tabbar { display: none; }
 
-/* =========================================================
-   МОБІЛЬНА АДАПТАЦІЯ
-   ========================================================= */
+/* ===== МОБІЛЬНА АДАПТАЦІЯ ===== */
 @media (max-width: 768px) {
   :root { --header-h: 64px; --tabbar-h: calc(58px + var(--safe-b)); }
 
   .topbar__row { padding: 8px 14px; gap: 12px; }
   .brand__name { font-size: 14px; letter-spacing: 1px; }
-  .brand__shield { font-size: 20px; }
+  .brand__shield svg { width: 21px; height: 25px; }
   .clock { font-size: 16px; }
-  .topbar__nav { display: none; }            /* навігація їде в tab-bar */
+  .topbar__nav { display: none; }
   .status-strip { padding: 7px 14px; font-size: 11px; gap: 9px; }
 
   .map { bottom: 0; }
 
-  /* шторка → bottom-sheet */
   .drawer {
     top: auto; left: 0; right: 0; bottom: 0;
     width: 100%; max-width: 100%; height: 78vh; max-height: 88vh;
@@ -402,7 +403,6 @@ svg path:focus-visible { outline: none !important; }
   }
   .drawer__body { padding: 14px 16px calc(20px + var(--safe-b)); }
 
-  /* нижній tab-bar */
   .tabbar {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1100;
     background: linear-gradient(0deg, var(--bg-1), rgba(17,26,46,0.96));
@@ -430,7 +430,7 @@ svg path:focus-visible { outline: none !important; }
   .about__grid { grid-template-columns: 1fr; }
   .about__lead { font-size: 13px; }
   .ev-status__timer { font-size: 18px; }
-  .chip { padding: 7px 13px; font-size: 11px; }      /* більші тач-таргети фільтрів */
+  .chip { padding: 7px 13px; font-size: 11px; }
   .src-toggle { padding: 6px 11px; }
 }
 
