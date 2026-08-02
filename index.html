@@ -1,1 +1,57 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ukraine Defender — моніторинг повітряних загроз</title>
+  <meta name="description" content="Система моніторингу повітряних загроз по всій Україні. Наразі активний регіон: Київ та область." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <!-- ШАПКА (двоверхова) -->
+  <header class="topbar">
+    <div class="topbar__row">
+      <div class="brand">
+        <span class="brand__shield">🛡️</span>
+        <span class="brand__name">UKRAINE DEFENDER</span>
+      </div>
+      <div class="topbar__meta">
+        <span class="clock" id="clock">--:--:--</span>
+        <span class="clock__tz">КИЇВ</span>
+      </div>
+      <nav class="topbar__nav">
+        <button class="nav-btn" data-nav="about">Про нас</button>
+        <button class="nav-btn" data-nav="donate">Донат</button>
+        <button class="nav-btn" data-nav="support">Підтримка</button>
+      </nav>
+    </div>
+    <div class="status-strip" id="statusStrip" data-state="calm">
+      <span class="status-strip__dot"></span>
+      <span class="status-strip__text" id="statusText">УСЕ ЧИСТО · ТРИМАЙМОСЬ</span>
+      <span class="status-strip__coverage" id="coverage">ПОКРИТТЯ 1/25</span>
+    </div>
+  </header>
 
+  <!-- КАРТА -->
+  <main id="map" class="map"></main>
+
+  <!-- БОКОВА ШТОРКА -->
+  <aside class="drawer" id="drawer" data-open="false">
+    <div class="drawer__head">
+      <div>
+        <h2 class="drawer__title" id="drawerTitle">Київська область</h2>
+        <span class="drawer__status" id="drawerStatus">—</span>
+      </div>
+      <button class="drawer__close" id="drawerClose">✕</button>
+    </div>
+    <div class="drawer__body" id="drawerBody">
+      <p class="drawer__empty">Оберіть область на карті</p>
+    </div>
+  </aside>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
