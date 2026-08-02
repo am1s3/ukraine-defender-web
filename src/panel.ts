@@ -24,7 +24,7 @@ const FILTERS: { key: FilterKey; label: string; verified?: boolean }[] = [
   { key: "recon", label: "Розвідка" },
 ];
 
-const VERIFIED_MIN = 3; // мінімум незалежних джерел щоб вважати подію перевіреною
+const VERIFIED_MIN = 3;
 
 function fmtTime(ts: string | null): string {
   if (!ts) return "--:--:--";
@@ -108,13 +108,12 @@ export class Drawer {
     this.renderHead();
   }
 
-  // Оновлення БЕЗ скидання тіла (викликається з poll кожні 5с)
   updateRegion(region: Region) {
     if (this.mode === "active") {
       this.currentRegion = region;
       this.renderHead();
     } else if (this.mode === "queued" && region.active) {
-      this.open(region); // регіон раптово ожив — відкриваємо по-новому (рідкісний кейс)
+      this.open(region);
     }
   }
 
@@ -129,6 +128,19 @@ export class Drawer {
     if (this.mode !== "active") return;
     this.events = events;
     this.renderBody();
+  }
+
+  // Знімає вічний спіннер при помилці мережі/бека — показує живу плашку, не бреше що "чисто"
+  setError() {
+    if (this.mode !== "active") return;
+    this.body.innerHTML = `
+      <div class="ev-error">
+        <span class="ev-error__dot"></span>
+        <div class="ev-error__txt">
+          <div class="ev-error__title">Не вдалося зчитати канали</div>
+          <div class="ev-error__sub">перевіряємо зв'язок · автоматична повторна спроба за мить</div>
+        </div>
+      </div>`;
   }
 
   private visibleEvents(): ThreatEvent[] {
