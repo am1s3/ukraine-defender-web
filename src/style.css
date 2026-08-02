@@ -143,25 +143,59 @@ svg path:focus-visible { outline: none !important; }
 .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
 .loading__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); animation: blink 0.8s infinite; }
 
-/* жива плашка помилки замість вічного спіннера */
+/* ===== ПЛАШКА ПОМИЛКИ (коли даних ще не було) ===== */
 .ev-error {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px; border-radius: 12px;
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 16px 16px 18px; border-radius: 12px;
   background:
     linear-gradient(rgba(255,176,32,0.05) 1px, transparent 1px) 0 0 / 100% 18px,
-    rgba(255,176,32,0.07);
+    radial-gradient(120% 80% at 0% 0%, rgba(255,176,32,0.12), transparent 60%),
+    rgba(255,176,32,0.06);
   border: 1px solid rgba(255,176,32,0.4);
   border-left: 3px solid var(--amber);
   animation: errIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
 }
 .ev-error__dot {
-  width: 10px; height: 10px; border-radius: 50%; flex: none;
-  background: var(--amber); box-shadow: 0 0 10px var(--amber);
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 12px var(--amber);
   animation: blink 0.9s infinite;
 }
+.ev-error__txt { min-width: 0; }
 .ev-error__title { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--amber); letter-spacing: 0.2px; }
 .ev-error__sub { margin-top: 4px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: 0.2px; }
+.ev-error__reason {
+  margin-top: 8px; font-family: var(--font-mono); font-size: 9.5px; line-height: 1.4;
+  color: #d8a85a; opacity: 0.85; word-break: break-word;
+  border-top: 1px dashed rgba(255,176,32,0.3); padding-top: 7px;
+}
+.ev-retry {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.3px;
+  color: var(--amber); background: rgba(255,176,32,0.08);
+  border: 1px solid rgba(255,176,32,0.5); border-radius: 8px;
+  padding: 7px 12px; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.ev-retry:hover { background: rgba(255,176,32,0.18); color: #fff; box-shadow: 0 0 14px rgba(255,176,32,0.3); transform: translateY(-1px); }
+.ev-retry:active { transform: translateY(0); }
+.ev-retry--mini { padding: 4px 9px; font-size: 13px; }
+.ev-error__progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255,176,32,0.12); }
+.ev-error__bar { display: block; height: 100%; background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: retryBar 12s linear infinite; transform-origin: left; }
+@keyframes retryBar { from { width: 100%; } to { width: 0%; } }
 @keyframes errIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== ТОНКИЙ БАНЕР (коли стрічка вже є, але оновлення не вдалось) ===== */
+.ev-stale {
+  display: flex; align-items: center; gap: 9px;
+  margin: -2px -2px 12px; padding: 9px 12px; border-radius: 9px;
+  background: rgba(255,176,32,0.08); border: 1px solid rgba(255,176,32,0.35);
+  animation: staleIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+.ev-stale__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink 0.9s infinite; flex: none; }
+.ev-stale__txt { font-family: var(--font-mono); font-size: 10.5px; color: #d8a85a; letter-spacing: 0.2px; flex: 1; }
+.ev-stale__close { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; line-height: 1; }
+.ev-stale__close:hover { color: var(--text); }
+@keyframes staleIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
 .ev-status {
   display: flex; align-items: center; gap: 10px;
@@ -336,4 +370,6 @@ svg path:focus-visible { outline: none !important; }
 @media (max-width: 480px) {
   .rp-counters { grid-template-columns: repeat(2, 1fr); }
   .rp-bar__name { width: 78px; font-size: 11px; }
+  .ev-error { grid-template-columns: auto 1fr; }
+  .ev-error .ev-retry { grid-column: 1 / -1; justify-self: start; }
 }
