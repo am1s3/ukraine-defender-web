@@ -30,12 +30,10 @@ async function openSummary() {
   summary.open(lastEvents, lastData, lastNight);
 }
 
-// ===== «Про нас» =====
 const aboutOverlay = document.getElementById("aboutOverlay")!;
 function openAbout() { aboutOverlay.dataset.open = "true"; }
 function closeAbout() { aboutOverlay.dataset.open = "false"; }
 
-// ===== Тости =====
 const toastHost = document.getElementById("toastHost")!;
 function showToast(text: string, kind: "info" | "warn" | "ok" = "info", icon = "ℹ️") {
   const el = document.createElement("div");
@@ -48,7 +46,6 @@ function showToast(text: string, kind: "info" | "warn" | "ok" = "info", icon = "
   }, 3200);
 }
 
-// ===== Навігація (шапка + tab-bar + закриття about) =====
 document.querySelectorAll<HTMLElement>("[data-nav]").forEach((b) => {
   b.addEventListener("click", () => {
     switch (b.dataset.nav) {
@@ -64,7 +61,6 @@ document.querySelectorAll<HTMLElement>("[data-nav-close='about']").forEach((b) =
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAbout(); });
 
-// ===== Годинник =====
 function tickClock() {
   const el = document.getElementById("clock")!;
   el.textContent = new Intl.DateTimeFormat("uk-UA", {
@@ -121,6 +117,13 @@ const origOpen = drawer.open.bind(drawer);
 drawer.open = (r) => { origOpen(r); map.clearPin(); pollEvents(); };
 const origClose = drawer.close.bind(drawer);
 drawer.close = () => { origClose(); map.clearPin(); };
+
+// Service worker — оффлайн-оболочка (PWA). Не блокує сайт якщо не підтримується.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((e) => console.warn("sw register failed", e));
+  });
+}
 
 poll();
 pollEvents();
