@@ -131,8 +131,8 @@ export class ThreatMap {
   private geoLayer: L.GeoJSON | null = null;
   private markers = new Map<string, L.CircleMarker>();
   private regionMap = new Map<string, Region>();
-  private hoverLayer: L.LayerGroup = L.layerGroup();   // тимчасова підсвітка (hover рядка)
-  private pinLayer: L.LayerGroup = L.layerGroup();     // закріплена підсвітка (клік)
+  private hoverLayer: L.LayerGroup = L.layerGroup();
+  private pinLayer: L.LayerGroup = L.layerGroup();
   private pinnedKey: string | null = null;
   private trajLayer: L.LayerGroup = L.layerGroup();
   private trajEnabled = false;
@@ -164,17 +164,15 @@ export class ThreatMap {
     }));
   }
 
-  // hover рядка стрічки — тимчасова точка, не чіпає pin
   setHighlight(toponymKey: string | null) {
     this.hoverLayer.clearLayers();
     if (!toponymKey) return;
-    if (toponymKey === this.pinnedKey) return; // не малюємо двічі поверх pin
+    if (toponymKey === this.pinnedKey) return;
     const meta = TOPONYM_CENTERS[toponymKey];
     if (!meta) return;
     this.drawMarkerInto(this.hoverLayer, meta.coord, false);
   }
 
-  // клік по рядку — закріплена точка + політ камери; живе до clearPin()
   flyToponym(toponymKey: string | null) {
     if (!toponymKey) return;
     const meta = TOPONYM_CENTERS[toponymKey];
@@ -324,22 +322,23 @@ export class ThreatMap {
     }
   }
 
+  // Пріоритет: ТРИВОГА > покриття > тиша. Тривога червоним для ВСІХ областей, навіть поза покриттям.
   private styleFor(key: string | null): L.PathOptions {
     const r = key ? this.regionMap.get(key) : undefined;
-    const active = r?.active ?? false;
     const alert = r?.alert ?? false;
-    if (!active) return { color: "#33455f", weight: 1, fillColor: "#16223a", fillOpacity: 0.42 };
-    if (alert)   return { color: "#ff6b6b", weight: 2.5, fillColor: "#ff2d2d", fillOpacity: 0.55 };
-    return { color: "#2ee6a6", weight: 1.5, fillColor: "#2ee6a6", fillOpacity: 0.22 };
+    const active = r?.active ?? false;
+    if (alert)   return { color: "#ff6b6b", weight: active ? 2.5 : 2, fillColor: "#ff2d2d", fillOpacity: active ? 0.55 : 0.42 };
+    if (active)  return { color: "#2ee6a6", weight: 1.5, fillColor: "#2ee6a6", fillOpacity: 0.22 };
+    return { color: "#33455f", weight: 1, fillColor: "#16223a", fillOpacity: 0.42 };
   }
 
   private markerStyle(key: string) {
     const r = this.regionMap.get(key);
-    const active = r?.active ?? false;
     const alert = r?.alert ?? false;
-    if (!active) return { color: "#33455f", fillColor: "#16223a", fillOpacity: 0.5, opacity: 0.7 };
-    if (alert)   return { color: "#ff6b6b", fillColor: "#ff2d2d", fillOpacity: 0.7, opacity: 1 };
-    return { color: "#2ee6a6", fillColor: "#2ee6a6", fillOpacity: 0.45, opacity: 1 };
+    const active = r?.active ?? false;
+    if (alert)  return { color: "#ff6b6b", fillColor: "#ff2d2d", fillOpacity: active ? 0.7 : 0.55, opacity: 1 };
+    if (active) return { color: "#2ee6a6", fillColor: "#2ee6a6", fillOpacity: 0.45, opacity: 1 };
+    return { color: "#33455f", fillColor: "#16223a", fillOpacity: 0.5, opacity: 0.7 };
   }
 
   private applyRegions() {
@@ -349,7 +348,8 @@ export class ThreatMap {
         m.setStyle(this.markerStyle(key));
         const r = this.regionMap.get(key);
         const el = (m as any)._path as SVGElement | undefined;
-        if (el) el.classList.toggle("pulse", !!(r?.alert && r?.active));
+        // пульс при тривозі — для будь-якої області, не лише активної
+        if (el) el.classList.toggle("pulse", !!r?.alert);
       }
     }
   }
