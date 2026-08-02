@@ -20,20 +20,51 @@ const map = new ThreatMap("map", (key) => {
 });
 
 const summary = new SummaryOverlay();
-document.querySelectorAll<HTMLElement>('[data-nav="report"]').forEach((b) => {
-  b.addEventListener("click", () => { void openSummary(); });
-});
 
 let lastData: AlertResponse | null = null;
 let lastEvents: ThreatEvent[] = [];
 let lastNight: NightResponse | null = null;
 
 async function openSummary() {
-  // підтягуємо агрегат з бази перед показом (не блокуємо якщо впав)
   try { lastNight = await fetchNight(12); } catch (e) { console.warn("night failed", e); }
   summary.open(lastEvents, lastData, lastNight);
 }
 
+// ===== «Про нас» =====
+const aboutOverlay = document.getElementById("aboutOverlay")!;
+function openAbout() { aboutOverlay.dataset.open = "true"; }
+function closeAbout() { aboutOverlay.dataset.open = "false"; }
+
+// ===== Тости =====
+const toastHost = document.getElementById("toastHost")!;
+function showToast(text: string, kind: "info" | "warn" | "ok" = "info", icon = "ℹ️") {
+  const el = document.createElement("div");
+  el.className = "toast" + (kind === "warn" ? " toast--warn" : kind === "ok" ? " toast--ok" : "");
+  el.innerHTML = `<span class="toast__ico">${icon}</span><span>${text}</span>`;
+  toastHost.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("toast--out");
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }, 3200);
+}
+
+// ===== Навігація (шапка + tab-bar + закриття about) =====
+document.querySelectorAll<HTMLElement>("[data-nav]").forEach((b) => {
+  b.addEventListener("click", () => {
+    switch (b.dataset.nav) {
+      case "report": void openSummary(); break;
+      case "about": openAbout(); break;
+      case "donate": showToast("Реквізити для донату з'являться незабаром. Дякуємо, що тримаєте стрій!", "warn", "💛"); break;
+      case "support": showToast("Техпідтримка: напишіть нам у Telegram — канал скоро відкриємо.", "info", "📡"); break;
+    }
+  });
+});
+document.querySelectorAll<HTMLElement>("[data-nav-close='about']").forEach((b) => {
+  b.addEventListener("click", closeAbout);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAbout(); });
+
+// ===== Годинник =====
 function tickClock() {
   const el = document.getElementById("clock")!;
   el.textContent = new Intl.DateTimeFormat("uk-UA", {
