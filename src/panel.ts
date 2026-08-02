@@ -109,4 +109,129 @@ export class Drawer {
   }
 
   setEvents(events: ThreatEvent[]) {
-    this
+    this.events = events;
+    this.renderBody();
+  }
+
+  private renderBody() {
+    const r = this.currentRegion!;
+    const alert = r.alert;
+
+    const head = `
+      <div class="ev-status ${alert ? "ev-status--alert" : "ev-status--calm"}">
+        <span class="ev-status__dot"></span>
+        <span class="ev-status__label">${alert ? "Тривога триває" : "Загроз немає"}</span>
+        <span class="ev-status__timer">${alert ? fmtDuration(r.duration_sec) : "тримаємось"}</span>
+      </div>`;
+
+    const chips = `
+      <div class="filters">
+        ${FILTERS.map((f) =>
+          `<button class="chip ${this.filter === f.key ? "chip--on" : ""}" data-filter="${f.key}">${f.label}</button>`
+        ).join("")}
+      </div>`;
+
+    const visible = this.filter === "all" ? this.events : this.events.filter((e) => e.threat_type === this.filter);
+
+    let list = "";
+    if (!alert && visible.length === 0) {
+      list = `<div class="calm-card"><p>Усе чисто. Тримаємось.</p><p class="calm-card__sub">Остання зміна статусу: ${r.changed ?? "—"}</p></div>`;
+    } else if (alert && visible.length === 0) {
+      list = `<div class="ev-empty">Тривога активна — деталі цілей зчитуються з каналів. Слідкуй за стрічкою.</div>`;
+    } else {
+      list = `<div class="ev-list">${visible.map((e, i) => this.rowHtml(e, i)).join("")}</div>`;
+    }
+
+    this.body.innerHTML = head + chips + list;
+    this.wire();
+
+    // оновлюємо набір ключів для анімації "нових" рядків наступного разу
+    this.prevKeys = new Set(visible.map((e) => this.eventKey(e)));
+  }
+
+  private eventKey(e: ThreatEvent): string {
+    return `${e.threat_type}|${e.toponym_key ?? "_"}|${e.source.id}`;
+  }
+
+  private rowHtml(e: ThreatEvent, i: number): string {
+    const meta = TYPE_META[e.threat_type];
+    const key = this.eventKey(e);
+    const isNew = !this.prevKeys.has(key);
+    const open = this.openSources.has(key);
+    const lvl = consensusLevel(e.consensus);
+    const countTxt = e.count ? ` · ${e.count} ${e.count === 1 ? "ціль" : "цілі"}` : "";
+    const launchTxt = e.launch_key ? ` · з ${e.launch_key}` : "";
+
+    return `
+      <div class="ev-row ${isNew ? "ev-row--new" : ""}" data-type="${e.threat_type}" data-topo="${e.toponym_key ?? ""}" style="--accent:${meta.color};--delay:${Math.min(i, 8) * 35}ms">
+        <div class="ev-row__bar"></div>
+        <div class="ev-row__main">
+          <div class="ev-row__top">
+            <span class="ev-row__icon">${meta.icon}</span>
+            <span class="ev-row__type">${meta.label}</span>
+            <span class="ev-row__time">${fmtTime(e.source.ts)}</span>
+          </div>
+          <div class="ev-row__dir">напрямок <b>${toponymName(e.toponym_key, e.toponym_raw)}</b>${countTxt}${launchTxt}</div>
+          <div class="ev-row__foot">
+            <button class="src-toggle ${open ? "src-toggle--on" : ""}" data-key="${key}">
+              <span class="src-toggle__n">${e.sources.length}</span> джерел${open ? " ▾" : " ▸"}
+            </button>
+            <span class="consensus consensus--${lvl}" title="рівень підтвердження">
+              <span class="consensus__bar"><span class="consensus__fill" style="width:${Math.min(e.consensus / 6 * 100, 100)}%"></span></span>
+              підтв. ${e.consensus}
+            </span>
+          </div>
+        </div>
+        ${open ? this.sourcesHtml(e) : ""}
+      </div>`;
+  }
+
+  private sourcesHtml(e: ThreatEvent): string {
+    const lvl = consensusLevel(e.consensus);
+    return `
+      <div class="ev-sources">
+        <div class="ev-sources__head">Джерела цього сповіщення</div>
+        ${e.sources.map((s) => `
+          <a class="ev-src" href="${s.url}" target="_blank" rel="noopener">
+            <span class="ev-src__ch">@${s.channel}</span>
+            <span class="ev-src__ts">${fmtTime(s.ts)}</span>
+            <span class="ev-src__go">↗</span>
+          </a>`).join("")}
+        <div class="ev-sources__foot consensus--${lvl}">Підтверджено ${e.consensus} незалежних джерел</div>
+      </div>`;
+  }
+
+  private wire() {
+    this.body.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.filter = btn.dataset.filter as ThreatType | "all";
+        this.renderBody();
+      });
+    });
+
+    this.body.querySelectorAll<HTMLElement>(".ev-row").forEach((row) => {
+      const topo = row.dataset.topo || null;
+      row.addEventListener("mouseenter", () => this.cb.onHoverToponym(topo));
+      row.addEventListener("mouseleave", () => this.cb.onHoverToponym(null));
+      row.addEventListener("click", (ev) => {
+        if ((ev.target as HTMLElement).closest(".src-toggle") || (ev.target as HTMLElement).closest(".ev-sources")) return;
+        this.cb.onFlyToponym(topo);
+      });
+    });
+
+    this.body.querySelectorAll<HTMLButtonElement>(".src-toggle").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const k = btn.dataset.key!;
+        if (this.openSources.has(k)) this.openSources.delete(k); else this.openSources.add(k);
+        this.renderBody();
+      });
+    });
+  }
+
+  close() {
+    this.root.dataset.open = "false";
+    this.currentRegion = null;
+    this.cb.onHoverToponym(null);
+  }
+}
