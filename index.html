@@ -22,6 +22,7 @@
         <span class="clock__tz">КИЇВ</span>
       </div>
       <nav class="topbar__nav">
+        <button class="nav-btn nav-btn--accent" data-nav="report">📊 Звіт</button>
         <button class="nav-btn" data-nav="about">Про нас</button>
         <button class="nav-btn" data-nav="donate">Донат</button>
         <button class="nav-btn" data-nav="support">Підтримка</button>
@@ -48,6 +49,12 @@
       <p class="drawer__empty">Оберіть область на карті</p>
     </div>
   </aside>
+
+  <!-- ОВЕРЛЕЙ ЗВІТУ -->
+  <div class="report-overlay" id="reportOverlay" data-open="false">
+    <div class="report-overlay__backdrop"></div>
+    <div class="report" id="reportCard"></div>
+  </div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
