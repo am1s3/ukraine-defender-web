@@ -6,7 +6,7 @@ import type { AlertResponse } from "./types";
 
 const drawer = new Drawer();
 const map = new ThreatMap("map", (key) => {
-  const r = lastData?.regions.find((x) => x.key === key);
+  const r = lastData?.regions.find((x) => x.key === key); 
   if (r) drawer.open(r);
 });
 
