@@ -2,7 +2,7 @@ import "./style.css";
 import { fetchAlerts } from "./api";
 import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
-import type { AlertResponse, Region } from "./types";
+import type { AlertResponse } from "./types";
 
 const drawer = new Drawer();
 const map = new ThreatMap("map", (key) => {
