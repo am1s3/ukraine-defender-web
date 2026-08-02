@@ -1,10 +1,35 @@
 import L from "leaflet";
 import type { Region } from "./types";
-import { REGION_CENTERS } from "./data/region-centers";
+
+const GEOJSON_URLS = [
+  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+];
+
+// shapeName (англ) → наш ключ
+function matchKey(shapeName: string): string | null {
+  const low = (shapeName || "").toLowerCase();
+  if (low.includes("kyiv") || low.includes("kiev") || low.includes("kyyiv")) {
+    return low.includes("oblast") || low.includes("kyyivs'ka") ? "kyiv_oblast" : "kyiv_city";
+  }
+  const MAP: [string, string[]][] = [
+    ["cherkasy", ["cherkas"]], ["chernihiv", ["chernih"]], ["chernivtsi", ["cherniv"]],
+    ["dnipro", ["dniprop"]], ["donetsk", ["donets"]], ["ivano_frankivsk", ["ivano"]],
+    ["kharkiv", ["kharkiv"]], ["kherson", ["kherson"]], ["khmelnytskyi", ["khmel"]],
+    ["kirovohrad", ["kirovoh"]], ["luhansk", ["luhans"]], ["lviv", ["lviv", "l'viv"]],
+    ["mykolaiv", ["mykola"]], ["odesa", ["odes", "odessa"]], ["poltava", ["poltav"]],
+    ["rivne", ["rivne", "rovno"]], ["sumy", ["sumy"]], ["ternopil", ["ternop"]],
+    ["zakarpattia", ["zakarp", "transcarpath"]], ["vinnytsia", ["vinny"]],
+    ["volyn", ["volyn"]], ["zaporizhzhia", ["zaporiz"]], ["zhytomyr", ["zhytom"]],
+  ];
+  for (const [key, pats] of MAP) if (pats.some((p) => low.includes(p))) return key;
+  return null;
+}
 
 export class ThreatMap {
   private map: L.Map;
-  private markers = new Map<string, L.CircleMarker>();
+  private geoLayer: L.GeoJSON | null = null;
+  private regionMap = new Map<string, Region>();
   private onSelect: (key: string) => void;
 
   constructor(el: string, onSelect: (key: string) => void) {
@@ -13,37 +38,45 @@ export class ThreatMap {
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 12, minZoom: 5,
     }).addTo(this.map);
+    this.loadGeo();
+  }
+
+  private async loadGeo() {
+    let geojson: unknown = null;
+    for (const url of GEOJSON_URLS) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) { geojson = await r.json(); break; }
+      } catch { /* пробуємо наступне джерело */ }
+    }
+    if (!geojson) { console.error("geojson не завантажено"); return; }
+
+    this.geoLayer = L.geoJSON(geojson as GeoJSON.GeoJsonObject, {
+      style: (f) => this.styleFor(f),
+      onEachFeature: (f, layer) => {
+        const key = matchKey((f.properties as any)?.shapeName);
+        if (!key) return;
+        layer.on("click", () => this.onSelect(key));
+        layer.bindTooltip((f.properties as any).shapeName, { sticky: true, direction: "top" });
+      },
+    }).addTo(this.map);
+
+    // якщо дані вже прийшли до завантаження карти — перефарбуємо
+    if (this.regionMap.size) this.geoLayer.setStyle((f) => this.styleFor(f));
+  }
+
+  private styleFor(f: any): L.PathOptions {
+    const key = matchKey(f?.properties?.shapeName);
+    const r = key ? this.regionMap.get(key) : undefined;
+    const active = r?.active ?? false;
+    const alert = r?.alert ?? false;
+    if (!active) return { color: "#3a4a63", weight: 1, fillColor: "#1a2740", fillOpacity: 0.35 }; // сірий (у черзі)
+    if (alert)   return { color: "#ff5555", weight: 2, fillColor: "#ff2d2d", fillOpacity: 0.55 }; // ЧЕРВОНИЙ (тривога)
+    return { color: "#2ee6a6", weight: 1.5, fillColor: "#2ee6a6", fillOpacity: 0.22 };            // зелений (чисто)
   }
 
   render(regions: Region[]) {
-    for (const r of regions) {
-      const center = REGION_CENTERS[r.key];
-      if (!center) continue;
-
-      const color = !r.active ? "#3a4a63"      // сірий (не підключено)
-                  : r.alert ? "#ff3b3b"        // червоний (тривога)
-                  : "#2ee6a6";                 // зелений (чисто)
-
-      let m = this.markers.get(r.key);
-      if (!m) {
-        m = L.circleMarker(center, { radius: 12, weight: 2 }).addTo(this.map);
-        m.on("click", () => this.onSelect(r.key));
-        this.markers.set(r.key, m);
-      }
-      m.setStyle({
-        color,
-        fillColor: color,
-        fillOpacity: r.alert && r.active ? 0.55 : 0.25,
-        opacity: r.active ? 1 : 0.5,
-      });
-      m.bindTooltip(
-        `${r.name_uk}${r.active ? "" : " · у черзі"}${r.alert ? " · 🔴 ТРИВОГА" : ""}`,
-        { direction: "top" }
-      );
-
-      // Пульс для активних регіонів під тривогою
-      const el = (m as any)._path as SVGElement | undefined;
-      if (el) el.classList.toggle("pulse", r.alert && r.active);
-    }
+    this.regionMap = new Map(regions.map((r) => [r.key, r]));
+    if (this.geoLayer) this.geoLayer.setStyle((f) => this.styleFor(f));
   }
 }
