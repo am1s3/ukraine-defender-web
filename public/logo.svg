@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" role="img" aria-label="Ukraine Defender">
+  <defs>
+    <linearGradient id="ud-steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33455f"/>
+      <stop offset="0.5" stop-color="#16223a"/>
+      <stop offset="1" stop-color="#0c1424"/>
+    </linearGradient>
+    <linearGradient id="ud-rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8eef7"/>
+      <stop offset="0.5" stop-color="#9fb3d1"/>
+      <stop offset="1" stop-color="#5d7characters"/>
+    </linearGradient>
+    <linearGradient id="ud-tri" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#cfe0f5"/>
+    </linearGradient>
+  </defs>
+  <path d="M12,6 L88,6 Q92,6 92,10 L92,52 Q92,86 50,116 Q8,86 8,52 L8,10 Q8,6 12,6 Z"
+        fill="url(#ud-steel)" stroke="url(#ud-rim)" stroke-width="3"/>
+  <path fill="url(#ud-tri)" d="
+    M50,24 L56,40 L53,42 L53,70 L47,70 L47,42 L44,40 Z
+    M62,70 L62,46 Q62,34 74,30 L78,34 Q70,40 70,52 L70,70 Z
+    M38,70 L38,46 Q38,34 26,30 L22,34 Q30,40 30,52 L30,70 Z
+    M30,66 L70,66 L70,74 L30,74 Z
+    M47,74 L44,90 L48,90 L50,80 L52,90 L56,90 L53,74 Z"/>
+</svg>
