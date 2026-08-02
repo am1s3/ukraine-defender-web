@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-  <!-- ШАПКА (двоверхова) -->
   <header class="topbar">
     <div class="topbar__row">
       <div class="brand">
@@ -35,10 +34,8 @@
     </div>
   </header>
 
-  <!-- КАРТА -->
   <main id="map" class="map"></main>
 
-  <!-- БОКОВА ШТОРКА -->
   <aside class="drawer" id="drawer" data-open="false">
     <div class="drawer__head">
       <div>
@@ -51,6 +48,16 @@
       <p class="drawer__empty">Оберіть область на карті</p>
     </div>
   </aside>
+
+  <!-- БЕЙДЖ ВЕРСІЇ (лівий нижній кут, живий прилад) -->
+  <div class="ver-badge" id="verBadge" data-state="dead" title="Стан з'єднання з сервером даних">
+    <span class="ver-badge__dot"></span>
+    <span class="ver-badge__v" id="verApp">v1.0.0</span>
+    <span class="ver-badge__sep">·</span>
+    <span class="ver-badge__api" id="verApi">API —</span>
+    <span class="ver-badge__sep">·</span>
+    <span class="ver-badge__age" id="verAge">очікування…</span>
+  </div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
