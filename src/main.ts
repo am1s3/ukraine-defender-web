@@ -8,6 +8,7 @@ import type { AlertResponse, ThreatEvent } from "./types";
 const drawer = new Drawer({
   onHoverToponym: (key) => map.setHighlight(key),
   onFlyToponym: (key) => map.flyToponym(key),
+  onRetry: () => { void pollEvents(); },
 });
 
 const map = new ThreatMap("map", (key) => {
@@ -55,9 +56,9 @@ async function pollEvents() {
     map.setTrajectories(lastEvents);
     if (drawer.isOpen()) drawer.setEvents(lastEvents);
   } catch (e) {
-    console.error("events failed", e);
-    // ВАЖЛИВО: знімаємо вічний спіннер — показуємо плашку помилки замість нього
-    if (drawer.isOpen()) drawer.setError();
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("events failed", msg);
+    if (drawer.isOpen()) drawer.setError(msg);
   }
 }
 
