@@ -80,7 +80,6 @@ function matchFeature(props: any): string | null {
   return null;
 }
 
-// --- Гео-математика для траєкторій ---
 function distanceKm(a: [number, number], b: [number, number]): number {
   const R = 6371;
   const dLat = ((b[0] - a[0]) * Math.PI) / 180;
@@ -95,7 +94,6 @@ function etaLabel(type: string, km: number): string {
   const h = Math.floor(min / 60);
   return `~${h} год ${min % 60} хв`;
 }
-// Дуга (квадратична Безьє) між двома точками — красивіше за пряму
 function arcPoints(a: [number, number], b: [number, number], segments = 26, curvature = 0.18): [number, number][] {
   const dx = b[1] - a[1], dy = b[0] - a[0];
   const dist = Math.hypot(dx, dy) || 1;
@@ -110,6 +108,23 @@ function arcPoints(a: [number, number], b: [number, number], segments = 26, curv
     pts.push([lat, lng]);
   }
   return pts;
+}
+
+// Кастомний контрол-тумблер (наслідування L.Control — типобезпечно, без as any)
+class TrajControl extends L.Control {
+  private toggleHandler: (btn: HTMLButtonElement) => void;
+  constructor(toggleHandler: (btn: HTMLButtonElement) => void) {
+    super({ position: "topright" });
+    this.toggleHandler = toggleHandler;
+  }
+  onAdd(): HTMLElement {
+    const div = L.DomUtil.create("div", "traj-toggle");
+    div.innerHTML = `<button class="traj-btn" title="Траєкторії цілей від джерел запуску">🎯 Траєкторії</button>`;
+    const btn = div.querySelector("button")!;
+    L.DomEvent.disableClickPropagation(div);
+    btn.addEventListener("click", () => this.toggleHandler(btn));
+    return div;
+  }
 }
 
 export class ThreatMap {
@@ -133,28 +148,15 @@ export class ThreatMap {
     }).addTo(this.map);
     this.highlight.addTo(this.map);
     this.trajLayer.addTo(this.map);
-    this.buildTrajControl();
+    new TrajControl((btn) => this.toggleTrajectories(btn)).addTo(this.map);
     this.loadGeo();
-  }
-
-  private buildTrajControl() {
-    const ctl = L.control({ position: "topright" });
-    ctl.onAdd = () => {
-      const div = L.DomUtil.create("div", "traj-toggle");
-      div.innerHTML = `<button class="traj-btn" title="Траєкторії цілей від джерел запуску">🎯 Траєкторії</button>`;
-      const btn = div.querySelector("button")!;
-      L.DomEvent.disableClickPropagation(div);
-      btn.addEventListener("click", () => this.toggleTrajectories(btn));
-      return div;
-    };
-    ctl.addTo(this.map);
   }
 
   private toggleTrajectories(btn: HTMLButtonElement) {
     this.trajEnabled = !this.trajEnabled;
     btn.classList.toggle("traj-btn--on", this.trajEnabled);
     if (this.trajEnabled) {
-      this.lastTrajKey = ""; // примусово перемалювати
+      this.lastTrajKey = "";
       this.drawTrajectories();
       this.fitTrajectories();
     } else {
@@ -178,7 +180,7 @@ export class ThreatMap {
   private drawTrajectories() {
     if (!this.trajEnabled) return;
     const sig = this.trajSignature(this.lastEvents);
-    if (sig === this.lastTrajKey) return; // нічого не змінилось — не дёргаємо
+    if (sig === this.lastTrajKey) return;
     this.lastTrajKey = sig;
     this.trajLayer.clearLayers();
 
@@ -193,20 +195,14 @@ export class ThreatMap {
       const dur = TYPE_DUR[e.threat_type] || TYPE_DUR.unknown;
       const pts = arcPoints(src.coord, dst.coord);
 
-      // дуга-траєкторія з біжучим трасером
-      L.polyline(pts, {
+      const line = L.polyline(pts, {
         color, weight: 2.5, opacity: 0.9, dashArray: "6 10",
         className: `trajectory trajectory--${e.threat_type}`,
-      }).addTo(this.trajLayer).bindTooltip(
-        `${TYPE_ICON[e.threat_type] || ""} ${e.threat_type} · ${src.name} → ${dst.name}`,
-        { sticky: true }
-      );
-      // застосовуємо швидкість анімації через CSS-змінну
-      const paths = this.trajLayer.getLayers().slice(-1)[0] as L.Polyline;
-      const el = (paths as any)._path as SVGElement | undefined;
+      }).addTo(this.trajLayer);
+      line.bindTooltip(`${TYPE_ICON[e.threat_type] || ""} ${e.threat_type} · ${src.name} → ${dst.name}`, { sticky: true });
+      const el = (line as any)._path as SVGElement | undefined;
       if (el) el.style.setProperty("--dur", dur);
 
-      // ETA-лейбл на середині дуги
       const km = distanceKm(src.coord, dst.coord);
       const mid = pts[Math.floor(pts.length / 2)];
       L.marker(mid, {
@@ -218,7 +214,6 @@ export class ThreatMap {
         }),
       }).addTo(this.trajLayer);
 
-      // емітер (точка пуску) — один раз на джерело
       if (!seenLaunch.has(e.launch_key)) {
         seenLaunch.add(e.launch_key);
         L.circleMarker(src.coord, {
