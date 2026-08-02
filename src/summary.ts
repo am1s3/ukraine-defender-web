@@ -1,4 +1,4 @@
-import type { AlertResponse, ThreatEvent, ThreatType } from "./types";
+import type { AlertResponse, ThreatEvent, ThreatType, NightResponse } from "./types";
 import { toBlob } from "html-to-image";
 import { TOPONYM_CENTERS } from "./data/toponym-centers";
 
@@ -22,6 +22,7 @@ export class SummaryOverlay {
   private card: HTMLElement;
   private events: ThreatEvent[] = [];
   private alerts: AlertResponse | null = null;
+  private night: NightResponse | null = null;
 
   constructor() {
     this.root = document.getElementById("reportOverlay")!;
@@ -30,51 +31,60 @@ export class SummaryOverlay {
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") this.close(); });
   }
 
-  open(events: ThreatEvent[], alerts: AlertResponse | null) {
+  open(events: ThreatEvent[], alerts: AlertResponse | null, night: NightResponse | null) {
     this.events = events;
     this.alerts = alerts;
+    this.night = night;
     this.render();
     this.root.dataset.open = "true";
   }
 
-  close() {
-    this.root.dataset.open = "false";
-  }
+  close() { this.root.dataset.open = "false"; }
 
   private render() {
-    const ev = this.events;
-    const totalReports = ev.reduce((s, e) => s + e.sources.length, 0);
-    const totalConfirmed = ev.reduce((s, e) => s + e.consensus, 0);
+    const n = this.night;
+    const hasDb = !!n && n.stored_events > 0;
 
-    // лічильники по типах
-    const byType = ORDER.map((t) => {
-      const groups = ev.filter((e) => e.threat_type === t);
-      const conf = groups.reduce((s, e) => s + e.consensus, 0);
-      return { t, groups: groups.length, conf };
-    }).filter((x) => x.groups > 0);
+    // Джерело цифр: база (за вікно) якщо є, інакше live-зріз
+    const byType = hasDb
+      ? ORDER.map((t) => {
+          const s = n!.by_type.find((x) => x.type === t);
+          return s ? { t, groups: s.count, conf: s.confirmed } : null;
+        }).filter((x): x is { t: ThreatType; groups: number; conf: number } => x !== null)
+      : ORDER.map((t) => {
+          const groups = this.events.filter((e) => e.threat_type === t);
+          return groups.length ? { t, groups: groups.length, conf: groups.reduce((s, e) => s + e.consensus, 0) } : null;
+        }).filter((x): x is { t: ThreatType; groups: number; conf: number } => x !== null);
     const maxGroups = Math.max(1, ...byType.map((x) => x.groups));
 
-    // топ напрямків
-    const dirs = new Map<string, number>();
-    for (const e of ev) {
-      if (!e.toponym_key) continue;
-      dirs.set(e.toponym_key, (dirs.get(e.toponym_key) ?? 0) + e.consensus);
-    }
-    const topDirs = [...dirs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const topDirs = hasDb
+      ? n!.top_toponyms.map((d) => [d.name, d.count] as [string, number])
+      : (() => {
+          const dirs = new Map<string, number>();
+          for (const e of this.events) if (e.toponym_key) dirs.set(e.toponym_key, (dirs.get(e.toponym_key) ?? 0) + e.consensus);
+          return [...dirs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, c]) => [toponymName(k), c] as [string, number]);
+        })();
 
-    // активні тривоги по країні
+    const channels = hasDb
+      ? n!.channels.map((c) => c.channel)
+      : [...new Set(this.events.flatMap((e) => e.sources.map((s) => s.channel)))];
+
+    const totalEvents = hasDb ? n!.stored_events : this.events.length;
+    const totalReports = hasDb ? n!.by_type.reduce((s, x) => s + x.count, 0) : this.events.reduce((s, e) => s + e.sources.length, 0);
+    const totalConfirmed = hasDb ? n!.by_type.reduce((s, x) => s + x.confirmed, 0) : this.events.reduce((s, e) => s + e.consensus, 0);
+
+    const windowLabel = hasDb
+      ? `за останні ${n!.hours} год · ${n!.stored_events} подій у базі`
+      : `поточний зріз каналів · база ще накопичує`;
+
     const alertRegions = (this.alerts?.regions ?? []).filter((r) => r.alert).map((r) => r.name_uk);
-
-    // унікальні джерела
-    const channels = new Set<string>();
-    for (const e of ev) for (const s of e.sources) channels.add(s.channel);
 
     const counters = `
       <div class="rp-counters">
-        <div class="rp-counter"><span class="rp-counter__n">${ev.length}</span><span class="rp-counter__l">сповіщень про цілі</span></div>
+        <div class="rp-counter"><span class="rp-counter__n">${totalEvents}</span><span class="rp-counter__l">подій за вікно</span></div>
         <div class="rp-counter"><span class="rp-counter__n">${totalReports}</span><span class="rp-counter__l">згадок у каналах</span></div>
         <div class="rp-counter"><span class="rp-counter__n">${totalConfirmed}</span><span class="rp-counter__l">підтверджень</span></div>
-        <div class="rp-counter"><span class="rp-counter__n">${channels.size}</span><span class="rp-counter__l">джерел</span></div>
+        <div class="rp-counter"><span class="rp-counter__n">${channels.length}</span><span class="rp-counter__l">джерел</span></div>
       </div>`;
 
     const bars = byType.length ? `
@@ -92,13 +102,26 @@ export class SummaryOverlay {
             </div>`;
           }).join("")}
         </div>
-      </div>` : `<div class="rp-block rp-block--empty">За поточним зрізом каналів цілей не зафіксовано.</div>`;
+      </div>` : `<div class="rp-block rp-block--empty">За вікном цілей не зафіксовано.</div>`;
 
     const dirsHtml = topDirs.length ? `
       <div class="rp-block">
         <div class="rp-block__title">Топ напрямків</div>
         <div class="rp-dirs">
-          ${topDirs.map(([k, c]) => `<span class="rp-dir">${toponymName(k)} <b>${c}</b></span>`).join("")}
+          ${topDirs.map(([name, c]) => `<span class="rp-dir">${name} <b>${c}</b></span>`).join("")}
+        </div>
+      </div>` : "";
+
+    const windowsHtml = hasDb && n!.windows.length ? `
+      <div class="rp-block">
+        <div class="rp-block__title">Вікна атак у базі</div>
+        <div class="rp-windows">
+          ${n!.windows.slice(0, 5).map((w) => `
+            <div class="rp-window ${w.alert ? "rp-window--live" : ""}">
+              <span class="rp-window__dot"></span>
+              <span class="rp-window__reg">${w.region}</span>
+              <span class="rp-window__t">${w.started ? this.fmt(w.started) : "—"}${w.ended ? " → " + this.fmt(w.ended) : " → триває"}</span>
+            </div>`).join("")}
         </div>
       </div>` : "";
 
@@ -106,7 +129,7 @@ export class SummaryOverlay {
       <div class="rp-block">
         <div class="rp-block__title">Тривога зараз · ${alertRegions.length} рег.</div>
         <div class="rp-alerts ${alertRegions.length ? "" : "rp-alerts--none"}">
-          ${alertRegions.length ? alertRegions.map((n) => `<span class="rp-alert-chip">${n}</span>`).join("") : "наразі чисто по всій країні"}
+          ${alertRegions.length ? alertRegions.map((nm) => `<span class="rp-alert-chip">${nm}</span>`).join("") : "наразі чисто по всій країні"}
         </div>
       </div>`;
 
@@ -115,19 +138,26 @@ export class SummaryOverlay {
         <div class="rp-head__brand"><span class="rp-head__shield">🛡️</span><span class="rp-head__name">UKRAINE DEFENDER</span></div>
         <button class="rp-close" id="rpClose">✕</button>
       </div>
-      <div class="rp-title">ЗВІТ ЗА ПОТОЧНИЙ ЗРІЗ</div>
-      <div class="rp-sub">${new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date())} · моніторинг каналів</div>
+      <div class="rp-title">ЗВІТ ${hasDb ? "ЗА ВІКНО" : "ЗА ПОТОЧНИЙ ЗРІЗ"}</div>
+      <div class="rp-sub">${windowLabel} · ${new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date())}</div>
       ${counters}
       ${bars}
       ${dirsHtml}
+      ${windowsHtml}
       ${alertsHtml}
       <div class="rp-foot">
-        <span class="rp-foot__src">джерела: ${[...channels].map((c) => "@" + c).join(", ") || "—"}</span>
+        <span class="rp-foot__src">джерела: ${channels.map((c) => "@" + c).join(", ") || "—"}</span>
         <button class="rp-share" id="rpShare">📤 Поділитися</button>
       </div>`;
 
     this.card.querySelector("#rpClose")!.addEventListener("click", () => this.close());
     this.card.querySelector("#rpShare")!.addEventListener("click", () => this.share());
+  }
+
+  private fmt(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
+    return new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d);
   }
 
   private async share() {
