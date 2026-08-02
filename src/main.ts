@@ -1,9 +1,9 @@
 import "./style.css";
-import { fetchAlerts, fetchEvents } from "./api";
+import { fetchAlerts, fetchEvents, fetchNight } from "./api";
 import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
 import { SummaryOverlay } from "./summary";
-import type { AlertResponse, ThreatEvent } from "./types";
+import type { AlertResponse, ThreatEvent, NightResponse } from "./types";
 
 const drawer = new Drawer({
   onHoverToponym: (key) => map.setHighlight(key),
@@ -21,11 +21,18 @@ const map = new ThreatMap("map", (key) => {
 
 const summary = new SummaryOverlay();
 document.querySelectorAll<HTMLElement>('[data-nav="report"]').forEach((b) => {
-  b.addEventListener("click", () => summary.open(lastEvents, lastData));
+  b.addEventListener("click", () => { void openSummary(); });
 });
 
 let lastData: AlertResponse | null = null;
 let lastEvents: ThreatEvent[] = [];
+let lastNight: NightResponse | null = null;
+
+async function openSummary() {
+  // підтягуємо агрегат з бази перед показом (не блокуємо якщо впав)
+  try { lastNight = await fetchNight(12); } catch (e) { console.warn("night failed", e); }
+  summary.open(lastEvents, lastData, lastNight);
+}
 
 function tickClock() {
   const el = document.getElementById("clock")!;
