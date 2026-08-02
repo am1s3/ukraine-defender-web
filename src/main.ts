@@ -56,6 +56,8 @@ async function pollEvents() {
     if (drawer.isOpen()) drawer.setEvents(lastEvents);
   } catch (e) {
     console.error("events failed", e);
+    // ВАЖЛИВО: знімаємо вічний спіннер — показуємо плашку помилки замість нього
+    if (drawer.isOpen()) drawer.setError();
   }
 }
 
