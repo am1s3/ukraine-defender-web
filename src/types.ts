@@ -1,7 +1,10 @@
+export type ThreatType =
+  | "shahed" | "ballistic" | "cruise" | "kab" | "aviation" | "recon" | "unknown";
+
 export interface Region {
   key: string;
   name_uk: string;
-  source_name: string;
+  source_name?: string;
   alert: boolean;
   changed: string | null;
   duration_sec: number | null;
@@ -17,18 +20,36 @@ export interface AlertResponse {
   regions: Region[];
   from_cache?: boolean;
   stale?: boolean;
+  errors?: string[];
 }
 
-// З'явиться на ШАГІ 3 (події з ТГ-каналів)
-export interface ThreatEvent {
+export interface EventSource {
+  channel: string;
   id: string;
-  ts: string;
-  threat_type: "shahed" | "ballistic" | "cruise" | "kab" | "aviation" | "recon" | "unknown";
+  ts: string | null;
+  url: string;
+}
+
+export interface ThreatEvent {
+  threat_type: ThreatType;
   toponym_key: string | null;
   toponym_raw: string | null;
   launch_key: string | null;
   count: number | null;
-  confidence: number;
-  sources: { channel: string; ts: string; url: string }[];
+  text: string;
+  source: EventSource;
+  sources: EventSource[];
   consensus: number;
+}
+
+export interface EventsResponse {
+  version: string;
+  region: string;
+  updated_at: string;
+  channels: string[];
+  posts_scanned: number;
+  events_count: number;
+  events: ThreatEvent[];
+  errors: string[];
+  from_cache?: boolean;
 }
