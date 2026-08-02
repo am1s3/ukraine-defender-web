@@ -1,6 +1,8 @@
 import type { Region, ThreatEvent, ThreatType } from "./types";
 import { toponymName } from "./data/toponym-centers";
 
+type FilterKey = ThreatType | "all" | "verified";
+
 const TYPE_META: Record<ThreatType, { label: string; icon: string; color: string }> = {
   shahed:    { label: "Шахед / БпЛА", icon: "🛸", color: "#35c4ff" },
   ballistic: { label: "Балістика",    icon: "🚀", color: "#ff3b3b" },
@@ -11,8 +13,9 @@ const TYPE_META: Record<ThreatType, { label: string; icon: string; color: string
   unknown:   { label: "Загроза",      icon: "⚠️", color: "#8aa0c0" },
 };
 
-const FILTERS: { key: ThreatType | "all"; label: string }[] = [
+const FILTERS: { key: FilterKey; label: string; verified?: boolean }[] = [
   { key: "all", label: "Усі" },
+  { key: "verified", label: "✓ Перевірені", verified: true },
   { key: "shahed", label: "Шахеди" },
   { key: "ballistic", label: "Балістика" },
   { key: "cruise", label: "Крилаті" },
@@ -20,6 +23,8 @@ const FILTERS: { key: ThreatType | "all"; label: string }[] = [
   { key: "aviation", label: "Авіація" },
   { key: "recon", label: "Розвідка" },
 ];
+
+const VERIFIED_MIN = 3; // мінімум незалежних джерел щоб вважати подію перевіреною
 
 function fmtTime(ts: string | null): string {
   if (!ts) return "--:--:--";
@@ -57,8 +62,9 @@ export class Drawer {
   private cb: PanelCallbacks;
 
   private currentRegion: Region | null = null;
+  private mode: "active" | "queued" | null = null;
   private events: ThreatEvent[] = [];
-  private filter: ThreatType | "all" = "all";
+  private filter: FilterKey = "all";
   private prevKeys = new Set<string>();
   private openSources = new Set<string>();
 
@@ -80,6 +86,7 @@ export class Drawer {
     this.filter = "all";
     this.prevKeys = new Set();
     this.openSources = new Set();
+    this.mode = region.active ? "active" : "queued";
     this.title.textContent = region.name_uk;
 
     if (!region.active) {
@@ -101,6 +108,16 @@ export class Drawer {
     this.renderHead();
   }
 
+  // Оновлення БЕЗ скидання тіла (викликається з poll кожні 5с)
+  updateRegion(region: Region) {
+    if (this.mode === "active") {
+      this.currentRegion = region;
+      this.renderHead();
+    } else if (this.mode === "queued" && region.active) {
+      this.open(region); // регіон раптово ожив — відкриваємо по-новому (рідкісний кейс)
+    }
+  }
+
   private renderHead() {
     const r = this.currentRegion!;
     const alert = r.alert;
@@ -109,8 +126,15 @@ export class Drawer {
   }
 
   setEvents(events: ThreatEvent[]) {
+    if (this.mode !== "active") return;
     this.events = events;
     this.renderBody();
+  }
+
+  private visibleEvents(): ThreatEvent[] {
+    if (this.filter === "all") return this.events;
+    if (this.filter === "verified") return this.events.filter((e) => e.consensus >= VERIFIED_MIN);
+    return this.events.filter((e) => e.threat_type === this.filter);
   }
 
   private renderBody() {
@@ -127,25 +151,26 @@ export class Drawer {
     const chips = `
       <div class="filters">
         ${FILTERS.map((f) =>
-          `<button class="chip ${this.filter === f.key ? "chip--on" : ""}" data-filter="${f.key}">${f.label}</button>`
+          `<button class="chip ${this.filter === f.key ? "chip--on" : ""} ${f.verified ? "chip--verified" : ""}" data-filter="${f.key}">${f.label}</button>`
         ).join("")}
       </div>`;
 
-    const visible = this.filter === "all" ? this.events : this.events.filter((e) => e.threat_type === this.filter);
+    const visible = this.visibleEvents();
 
     let list = "";
     if (!alert && visible.length === 0) {
       list = `<div class="calm-card"><p>Усе чисто. Тримаємось.</p><p class="calm-card__sub">Остання зміна статусу: ${r.changed ?? "—"}</p></div>`;
     } else if (alert && visible.length === 0) {
-      list = `<div class="ev-empty">Тривога активна — деталі цілей зчитуються з каналів. Слідкуй за стрічкою.</div>`;
+      const hint = this.filter === "verified"
+        ? `Перевірених подій поки немає — чекаємо підтвердження від кількох каналів.`
+        : `Тривога активна — деталі цілей зчитуються з каналів. Слідкуй за стрічкою.`;
+      list = `<div class="ev-empty">${hint}</div>`;
     } else {
       list = `<div class="ev-list">${visible.map((e, i) => this.rowHtml(e, i)).join("")}</div>`;
     }
 
     this.body.innerHTML = head + chips + list;
     this.wire();
-
-    // оновлюємо набір ключів для анімації "нових" рядків наступного разу
     this.prevKeys = new Set(visible.map((e) => this.eventKey(e)));
   }
 
@@ -163,7 +188,7 @@ export class Drawer {
     const launchTxt = e.launch_key ? ` · з ${e.launch_key}` : "";
 
     return `
-      <div class="ev-row ${isNew ? "ev-row--new" : ""}" data-type="${e.threat_type}" data-topo="${e.toponym_key ?? ""}" style="--accent:${meta.color};--delay:${Math.min(i, 8) * 35}ms">
+      <div class="ev-row ${isNew ? "ev-row--new" : ""}" data-type="${e.threat_type}" data-topo="${e.toponym_key ?? ""}" style="--accent:${meta.color}">
         <div class="ev-row__bar"></div>
         <div class="ev-row__main">
           <div class="ev-row__top">
@@ -204,7 +229,7 @@ export class Drawer {
   private wire() {
     this.body.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        this.filter = btn.dataset.filter as ThreatType | "all";
+        this.filter = btn.dataset.filter as FilterKey;
         this.renderBody();
       });
     });
@@ -232,6 +257,7 @@ export class Drawer {
   close() {
     this.root.dataset.open = "false";
     this.currentRegion = null;
+    this.mode = null;
     this.cb.onHoverToponym(null);
   }
 }
