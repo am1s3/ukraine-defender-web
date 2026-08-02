@@ -3,16 +3,16 @@ import type { Region, ThreatEvent } from "./types";
 import { TOPONYM_CENTERS } from "./data/toponym-centers";
 import { LAUNCH_CENTERS, SPEED_KMH, TYPE_COLOR, TYPE_ICON, TYPE_DUR } from "./data/launch-points";
 
-// Джерела контурів областей. jsdelivr = стабільний CDN-проксі github (без тротлінгу raw).
+// Джерела контурів областей.
+// ВАЖЛИВО: geoBoundaries лежить у Git LFS, тому jsdelivr/raw віддають LFS-поінтер (сміття).
+// Реальний контент віддає media.githubusercontent.com (LFS-сховище GitHub).
 // "/ukraine.geojson" — локальний файл з public/, якщо покладеш (пріоритет 1, миттєво, оффлайн).
 const GEOJSON_URLS = [
   "/ukraine.geojson",
-  "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
-  "https://cdn.jsdelivr.net/gh/wmgeolab/geoBoundaries@main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
+  "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
   "https://cdn.jsdelivr.net/gh/codeforgermany/click_that_hood@main/public/data/ukraine.geojson",
-  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
-  "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson",
   "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/ukraine.geojson",
+  "https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_UKR_1.json",
 ];
 
 const ISO_MAP: Record<string, string> = {
@@ -288,7 +288,7 @@ export class ThreatMap {
         const data = await r.json();
         const feats = data?.features ?? [];
         if (Array.isArray(feats) && feats.length > 0) { geojson = data; usedUrl = url; break; }
-        console.warn(`[map] ${url} → немає features`);
+        console.warn(`[map] ${url} → немає features (можливо LFS-поінтер)`);
       } catch (e) { console.warn(`[map] ${url} → помилка`, e); }
     }
 
@@ -309,7 +309,7 @@ export class ThreatMap {
       console.log(`[map] geojson OK (${usedUrl}), областей: ${matched}`);
       if (matched === 0) { console.warn("[map] 0 областей → fallback маркери"); this.buildFallbackMarkers(); }
     } else {
-      console.warn("[map] усі дзеркала впали → fallback маркери");
+      console.warn("[map] усі джерела впали → fallback маркери");
       this.buildFallbackMarkers();
     }
 
