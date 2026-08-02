@@ -110,7 +110,6 @@ function arcPoints(a: [number, number], b: [number, number], segments = 26, curv
   return pts;
 }
 
-// Кастомний контрол-тумблер (наслідування L.Control — типобезпечно, без as any)
 class TrajControl extends L.Control {
   private toggleHandler: (btn: HTMLButtonElement) => void;
   constructor(toggleHandler: (btn: HTMLButtonElement) => void) {
@@ -132,7 +131,9 @@ export class ThreatMap {
   private geoLayer: L.GeoJSON | null = null;
   private markers = new Map<string, L.CircleMarker>();
   private regionMap = new Map<string, Region>();
-  private highlight: L.LayerGroup = L.layerGroup();
+  private hoverLayer: L.LayerGroup = L.layerGroup();   // тимчасова підсвітка (hover рядка)
+  private pinLayer: L.LayerGroup = L.layerGroup();     // закріплена підсвітка (клік)
+  private pinnedKey: string | null = null;
   private trajLayer: L.LayerGroup = L.layerGroup();
   private trajEnabled = false;
   private lastTrajKey = "";
@@ -146,10 +147,48 @@ export class ThreatMap {
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 12, minZoom: 4, subdomains: "abcd",
     }).addTo(this.map);
-    this.highlight.addTo(this.map);
+    this.hoverLayer.addTo(this.map);
+    this.pinLayer.addTo(this.map);
     this.trajLayer.addTo(this.map);
     new TrajControl((btn) => this.toggleTrajectories(btn)).addTo(this.map);
     this.loadGeo();
+  }
+
+  private drawMarkerInto(layer: L.LayerGroup, coord: [number, number], pinned: boolean) {
+    layer.addLayer(L.circleMarker(coord, {
+      radius: pinned ? 18 : 16, color: pinned ? "#ffd700" : "#35c4ff", weight: 2,
+      fillColor: pinned ? "#ffd700" : "#35c4ff", fillOpacity: 0.18, className: "topo-pulse",
+    }));
+    layer.addLayer(L.circleMarker(coord, {
+      radius: 5, color: "#fff", weight: 1.5, fillColor: pinned ? "#ffd700" : "#35c4ff", fillOpacity: 0.9,
+    }));
+  }
+
+  // hover рядка стрічки — тимчасова точка, не чіпає pin
+  setHighlight(toponymKey: string | null) {
+    this.hoverLayer.clearLayers();
+    if (!toponymKey) return;
+    if (toponymKey === this.pinnedKey) return; // не малюємо двічі поверх pin
+    const meta = TOPONYM_CENTERS[toponymKey];
+    if (!meta) return;
+    this.drawMarkerInto(this.hoverLayer, meta.coord, false);
+  }
+
+  // клік по рядку — закріплена точка + політ камери; живе до clearPin()
+  flyToponym(toponymKey: string | null) {
+    if (!toponymKey) return;
+    const meta = TOPONYM_CENTERS[toponymKey];
+    if (!meta) return;
+    this.pinnedKey = toponymKey;
+    this.pinLayer.clearLayers();
+    this.drawMarkerInto(this.pinLayer, meta.coord, true);
+    this.hoverLayer.clearLayers();
+    this.map.flyTo(meta.coord, 9, { duration: 0.8 });
+  }
+
+  clearPin() {
+    this.pinnedKey = null;
+    this.pinLayer.clearLayers();
   }
 
   private toggleTrajectories(btn: HTMLButtonElement) {
@@ -318,22 +357,5 @@ export class ThreatMap {
   render(regions: Region[]) {
     this.regionMap = new Map(regions.map((r) => [r.key, r]));
     this.applyRegions();
-  }
-
-  setHighlight(toponymKey: string | null) {
-    this.highlight.clearLayers();
-    if (!toponymKey) return;
-    const meta = TOPONYM_CENTERS[toponymKey];
-    if (!meta) return;
-    this.highlight.addLayer(L.circleMarker(meta.coord, { radius: 16, color: "#35c4ff", weight: 2, fillColor: "#35c4ff", fillOpacity: 0.18, className: "topo-pulse" }));
-    this.highlight.addLayer(L.circleMarker(meta.coord, { radius: 5, color: "#fff", weight: 1.5, fillColor: "#35c4ff", fillOpacity: 0.9 }));
-  }
-
-  flyToponym(toponymKey: string | null) {
-    if (!toponymKey) return;
-    const meta = TOPONYM_CENTERS[toponymKey];
-    if (!meta) return;
-    this.map.flyTo(meta.coord, 9, { duration: 0.8 });
-    this.setHighlight(toponymKey);
   }
 }
