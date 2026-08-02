@@ -72,7 +72,6 @@ body {
 .topo-pulse { animation: topoPulse 1.3s ease-out infinite; }
 @keyframes topoPulse { 0% { opacity: 0.9; } 50% { opacity: 0.2; } 100% { opacity: 0.9; } }
 
-/* ===== ТРАЄКТОРІЇ ===== */
 .trajectory { animation: trajDash var(--dur, 1s) linear infinite; filter: drop-shadow(0 0 4px currentColor); }
 @keyframes trajDash { to { stroke-dashoffset: -16; } }
 .emitter { animation: emitterPulse 1.1s ease-out infinite; }
@@ -99,7 +98,6 @@ body {
   box-shadow: 0 4px 14px rgba(0,0,0,0.5);
 }
 
-/* ===== ШТОРКА ===== */
 .drawer {
   position: fixed; top: 96px; right: 0; bottom: 0; width: 400px; max-width: 92vw;
   background: var(--panel);
@@ -167,8 +165,9 @@ body {
 .calm-card { color: var(--green); font-size: 15px; }
 .calm-card__sub { margin-top: 8px; color: var(--muted); font-size: 12px; font-family: var(--font-mono); }
 
+/* ВАЖЛИВО: рядок = block, щоб розгортка джерел йшла ПІД вмістом, а не в одну колонку */
 .ev-row {
-  position: relative; display: flex; flex-wrap: wrap;
+  position: relative; display: block;
   background: var(--panel-2); border: 1px solid var(--line);
   border-radius: 10px; padding: 12px 12px 12px 16px;
   cursor: pointer; overflow: hidden;
@@ -177,7 +176,7 @@ body {
 .ev-row:hover { border-color: var(--accent); transform: translateX(-2px); box-shadow: 0 6px 22px rgba(0,0,0,0.4), inset 0 0 0 1px var(--accent); }
 .ev-row--new { animation: rowFlash 0.9s ease-out, rowIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
 .ev-row__bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
-.ev-row__main { flex: 1; min-width: 0; }
+.ev-row__main { display: block; }
 .ev-row__top { display: flex; align-items: center; gap: 8px; }
 .ev-row__icon { font-size: 15px; line-height: 1; }
 .ev-row__type { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.2px; }
@@ -210,7 +209,8 @@ body {
 .consensus--high { color: var(--green); }
 
 .ev-sources {
-  flex-basis: 100%; margin-top: 10px; padding-top: 10px;
+  display: block; width: 100%;
+  margin-top: 10px; padding-top: 10px;
   border-top: 1px dashed var(--line);
   animation: srcOpen 0.25s ease-out;
 }
@@ -230,39 +230,3 @@ body {
 .queued__lock { font-size: 34px; opacity: 0.7; margin-bottom: 14px; }
 .queued__name { font-family: var(--font-display); font-size: 16px; color: var(--amber); margin-bottom: 12px; }
 .queued__text { color: var(--muted); font-size: 13px; line-height: 1.7; }
-
-.ver-badge {
-  position: fixed; left: 14px; bottom: 14px; z-index: 950;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 7px 12px 7px 11px;
-  background: linear-gradient(180deg, rgba(24,36,61,0.92), rgba(17,26,46,0.92));
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--muted);
-  border-radius: 9px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 26px rgba(0,0,0,0.45);
-  font-family: var(--font-mono);
-  transition: border-color 0.2s, transform 0.18s, box-shadow 0.2s;
-  user-select: none;
-}
-.ver-badge:hover {
-  transform: translateY(-2px);
-  border-color: var(--cyan);
-  border-left-color: var(--cyan);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.55), 0 0 16px rgba(53,196,255,0.18);
-}
-.ver-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 8px currentColor; flex: none; transition: background 0.3s; }
-.ver-badge[data-state="live"]  { border-left-color: var(--green); }
-.ver-badge[data-state="live"]  .ver-badge__dot { background: var(--green); animation: blink 1.6s infinite; }
-.ver-badge[data-state="stale"] { border-left-color: var(--amber); }
-.ver-badge[data-state="stale"] .ver-badge__dot { background: var(--amber); animation: blink 0.9s infinite; }
-.ver-badge[data-state="dead"]  { border-left-color: var(--red); }
-.ver-badge[data-state="dead"]  .ver-badge__dot { background: var(--red); animation: blink 0.5s infinite; }
-.ver-badge__v { font-size: 12px; font-weight: 600; letter-spacing: 0.5px; color: var(--text); }
-.ver-badge__sep { color: var(--line); font-size: 11px; }
-.ver-badge__api { font-size: 10.5px; color: var(--cyan); letter-spacing: 0.3px; }
-.ver-badge__age { font-size: 10.5px; color: var(--muted); letter-spacing: 0.2px; }
-@media (max-width: 560px) {
-  .ver-badge__api, .ver-badge__sep { display: none; }
-  .ver-badge { padding: 6px 10px; }
-}
