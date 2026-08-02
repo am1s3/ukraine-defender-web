@@ -52,6 +52,7 @@ function consensusLevel(n: number): string {
 export interface PanelCallbacks {
   onHoverToponym: (key: string | null) => void;
   onFlyToponym: (key: string | null) => void;
+  onRetry: () => void;
 }
 
 export class Drawer {
@@ -67,6 +68,8 @@ export class Drawer {
   private filter: FilterKey = "all";
   private prevKeys = new Set<string>();
   private openSources = new Set<string>();
+  private hadData = false;     // чи був успішний ответ від бека
+  private lastError = "";      // остання причина помилки
 
   constructor(cb: PanelCallbacks) {
     this.cb = cb;
@@ -86,6 +89,8 @@ export class Drawer {
     this.filter = "all";
     this.prevKeys = new Set();
     this.openSources = new Set();
+    this.hadData = false;
+    this.lastError = "";
     this.mode = region.active ? "active" : "queued";
     this.title.textContent = region.name_uk;
 
@@ -127,20 +132,67 @@ export class Drawer {
   setEvents(events: ThreatEvent[]) {
     if (this.mode !== "active") return;
     this.events = events;
+    this.hadData = true;          // бек відповів — дані є (навіть якщо цілей 0)
+    this.lastError = "";
     this.renderBody();
+    this.removeStaleBanner();     // успіх — прибираємо баннер помилки якщо був
   }
 
-  // Знімає вічний спіннер при помилці мережі/бека — показує живу плашку, не бреше що "чисто"
-  setError() {
+  // Розумна помилка: якщо даних ще не було — плашка на весь body;
+  // якщо стрічка вже є — тонкий баннер зверху, лента НЕ ховається (stale-while-error).
+  setError(msg?: string) {
     if (this.mode !== "active") return;
+    this.lastError = (msg || "").slice(0, 160);
+    if (this.hadData) this.showStaleBanner();
+    else this.showErrorCard();
+  }
+
+  private showErrorCard() {
+    const reason = this.lastError
+      ? `<div class="ev-error__reason">${this.esc(this.lastError)}</div>`
+      : "";
     this.body.innerHTML = `
       <div class="ev-error">
         <span class="ev-error__dot"></span>
         <div class="ev-error__txt">
           <div class="ev-error__title">Не вдалося зчитати канали</div>
-          <div class="ev-error__sub">перевіряємо зв'язок · автоматична повторна спроба за мить</div>
+          <div class="ev-error__sub">перевіряємо зв'язок · автоповтор за мить</div>
+          ${reason}
         </div>
+        <button class="ev-retry" type="button">↻ Повторити</button>
+        <div class="ev-error__progress"><span class="ev-error__bar"></span></div>
       </div>`;
+    this.wireErrorActions();
+  }
+
+  private showStaleBanner() {
+    if (this.body.querySelector(".ev-stale")) return; // вже є
+    const banner = document.createElement("div");
+    banner.className = "ev-stale";
+    banner.innerHTML = `
+      <span class="ev-stale__dot"></span>
+      <span class="ev-stale__txt">оновлення не вдалось · показуємо останні дані</span>
+      <button class="ev-retry ev-retry--mini" type="button">↻</button>
+      <button class="ev-stale__close" type="button" title="сховати">✕</button>`;
+    this.body.insertBefore(banner, this.body.firstChild);
+    this.wireErrorActions();
+  }
+
+  private removeStaleBanner() {
+    this.body.querySelector(".ev-stale")?.remove();
+  }
+
+  private wireErrorActions() {
+    this.body.querySelectorAll<HTMLButtonElement>(".ev-retry").forEach((b) => {
+      b.onclick = (ev) => { ev.stopPropagation(); this.cb.onRetry(); };
+    });
+    this.body.querySelectorAll<HTMLButtonElement>(".ev-stale__close").forEach((b) => {
+      b.onclick = (ev) => { ev.stopPropagation(); this.removeStaleBanner(); };
+    });
+  }
+
+  private esc(s: string): string {
+    return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
   }
 
   private visibleEvents(): ThreatEvent[] {
