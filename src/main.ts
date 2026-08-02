@@ -2,6 +2,7 @@ import "./style.css";
 import { fetchAlerts, fetchEvents } from "./api";
 import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
+import { SummaryOverlay } from "./summary";
 import type { AlertResponse, ThreatEvent } from "./types";
 
 const drawer = new Drawer({
@@ -15,6 +16,11 @@ const map = new ThreatMap("map", (key) => {
     drawer.open(r);
     if (r.active) pollEvents();
   }
+});
+
+const summary = new SummaryOverlay();
+document.querySelectorAll<HTMLElement>('[data-nav="report"]').forEach((b) => {
+  b.addEventListener("click", () => summary.open(lastEvents, lastData));
 });
 
 let lastData: AlertResponse | null = null;
@@ -70,7 +76,6 @@ async function poll() {
   }
 }
 
-// обгортки: при відкритті/закритті області скидаємо закріплений пін на карті
 const origOpen = drawer.open.bind(drawer);
 drawer.open = (r) => { origOpen(r); map.clearPin(); pollEvents(); };
 const origClose = drawer.close.bind(drawer);
