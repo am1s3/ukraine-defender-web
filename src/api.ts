@@ -1,8 +1,7 @@
-import type { AlertResponse, EventsResponse } from "./types";
+import type { AlertResponse, EventsResponse, NightResponse } from "./types";
 
 const API_BASE = "https://ukraine-defender-api.shushko-art.workers.dev";
 
-// fetch з жорстким таймаутом, щоб фронт ніколи не висів вічно
 function fetchWithTimeout(url: string, ms: number, init?: RequestInit): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -23,4 +22,13 @@ export async function fetchEvents(region = "kyiv"): Promise<EventsResponse> {
   );
   if (!res.ok) throw new Error(`API events HTTP ${res.status}`);
   return (await res.json()) as EventsResponse;
+}
+
+export async function fetchNight(hours = 12): Promise<NightResponse> {
+  const res = await fetchWithTimeout(
+    `${API_BASE}/api/night?hours=${hours}`,
+    8000
+  );
+  if (!res.ok) throw new Error(`API night HTTP ${res.status}`);
+  return (await res.json()) as NightResponse;
 }
