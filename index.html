@@ -6,6 +6,15 @@
   <meta name="theme-color" content="#0b1220" />
   <title>Ukraine Defender — моніторинг повітряних загроз</title>
   <meta name="description" content="Система моніторингу повітряних загроз по всій Україні. Наразі активний регіон: Київ та область." />
+
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="UA Defender" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -15,7 +24,23 @@
   <header class="topbar">
     <div class="topbar__row">
       <div class="brand">
-        <span class="brand__shield">🛡️</span>
+        <span class="brand__shield" aria-hidden="true">
+          <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bs-steel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#33455f"/><stop offset="0.5" stop-color="#16223a"/><stop offset="1" stop-color="#0c1424"/>
+              </linearGradient>
+              <linearGradient id="bs-rim" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e8eef7"/><stop offset="0.5" stop-color="#9fb3d1"/><stop offset="1" stop-color="#5d739a"/>
+              </linearGradient>
+              <linearGradient id="bs-tri" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe0f5"/>
+              </linearGradient>
+            </defs>
+            <path d="M12,6 L88,6 Q92,6 92,10 L92,52 Q92,86 50,116 Q8,86 8,52 L8,10 Q8,6 12,6 Z" fill="url(#bs-steel)" stroke="url(#bs-rim)" stroke-width="3"/>
+            <path fill="url(#bs-tri)" d="M50,24 L56,40 L53,42 L53,70 L47,70 L47,42 L44,40 Z M62,70 L62,46 Q62,34 74,30 L78,34 Q70,40 70,52 L70,70 Z M38,70 L38,46 Q38,34 26,30 L22,34 Q30,40 30,52 L30,70 Z M30,66 L70,66 L70,74 L30,74 Z M47,74 L44,90 L48,90 L50,80 L52,90 L56,90 L53,74 Z"/>
+          </svg>
+        </span>
         <span class="brand__name">UKRAINE DEFENDER</span>
       </div>
       <div class="topbar__meta">
@@ -52,7 +77,6 @@
     </div>
   </aside>
 
-  <!-- НИЖНІЙ TAB-BAR (лише мобільний) -->
   <nav class="tabbar" aria-label="навігація">
     <button class="tabbar__btn tabbar__btn--accent" data-nav="report">
       <span class="tabbar__ico">📊</span><span class="tabbar__lbl">Звіт</span>
@@ -68,18 +92,35 @@
     </button>
   </nav>
 
-  <!-- ОВЕРЛЕЙ ЗВІТУ -->
   <div class="report-overlay" id="reportOverlay" data-open="false">
     <div class="report-overlay__backdrop"></div>
     <div class="report" id="reportCard"></div>
   </div>
 
-  <!-- ОВЕРЛЕЙ «ПРО НАС» -->
   <div class="about-overlay" id="aboutOverlay" data-open="false">
     <div class="about-overlay__backdrop" data-nav-close="about"></div>
     <div class="about" role="dialog" aria-label="про проєкт">
       <div class="about__head">
-        <div class="about__brand"><span class="about__shield">🛡️</span><span class="about__name">UKRAINE DEFENDER</span></div>
+        <div class="about__brand">
+          <span class="about__shield" aria-hidden="true">
+            <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ab-steel" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#33455f"/><stop offset="0.5" stop-color="#16223a"/><stop offset="1" stop-color="#0c1424"/>
+                </linearGradient>
+                <linearGradient id="ab-rim" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#e8eef7"/><stop offset="0.5" stop-color="#9fb3d1"/><stop offset="1" stop-color="#5d739a"/>
+                </linearGradient>
+                <linearGradient id="ab-tri" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe0f5"/>
+                </linearGradient>
+              </defs>
+              <path d="M12,6 L88,6 Q92,6 92,10 L92,52 Q92,86 50,116 Q8,86 8,52 L8,10 Q8,6 12,6 Z" fill="url(#ab-steel)" stroke="url(#ab-rim)" stroke-width="3"/>
+              <path fill="url(#ab-tri)" d="M50,24 L56,40 L53,42 L53,70 L47,70 L47,42 L44,40 Z M62,70 L62,46 Q62,34 74,30 L78,34 Q70,40 70,52 L70,70 Z M38,70 L38,46 Q38,34 26,30 L22,34 Q30,40 30,52 L30,70 Z M30,66 L70,66 L70,74 L30,74 Z M47,74 L44,90 L48,90 L50,80 L52,90 L56,90 L53,74 Z"/>
+            </svg>
+          </span>
+          <span class="about__name">UKRAINE DEFENDER</span>
+        </div>
         <button class="about__close" data-nav-close="about">✕</button>
       </div>
       <p class="about__lead">Національна система моніторингу повітряних загроз у реальному часі. Ми читаємо відкриті канали спостереження, збираємо підтвердження з незалежних джерел і показуємо єдину картину по всій Україні.</p>
@@ -93,7 +134,7 @@
         <div class="about__card">
           <div class="about__card-ico">🤝</div>
           <div class="about__card-t">Consensus</div>
-          <div class="about__card-d">Подія вагомий лише коли її підтверджують кілька незалежних джерел.</div>
+          <div class="about__card-d">Подія вагома лише коли її підтверджують кілька незалежних джерел.</div>
         </div>
         <div class="about__card">
           <div class="about__card-ico">🧠</div>
@@ -132,7 +173,6 @@
     </div>
   </div>
 
-  <!-- ТОСТИ -->
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
 
   <script type="module" src="/src/main.ts"></script>
