@@ -1,6 +1,8 @@
 // ============================================================
-// Ukraine Defender — api.ts (FULL)
-// Прямі адреси + всі функції
+// Ukraine Defender — api.ts (FULL, FIXED)
+// Прямі адреси + всі функції.
+// FIX: Authorization НЕ шлеться на data-ендпоінти,
+// щоб не ламати CORS preflight.
 // ============================================================
 
 import type {
@@ -135,8 +137,12 @@ export interface ApiRequestOptions {
   timeoutMs?: number;
 }
 
+function isDataPath(path: string): boolean {
+  return /^\/api\/(alerts|events|posts|night)/.test(path);
+}
+
 function baseFor(path: string): string {
-  if (/^\/api\/(alerts|events|posts|night)/.test(path)) {
+  if (isDataPath(path)) {
     return DATA_API_BASE;
   }
   return AUTH_API_BASE;
@@ -174,7 +180,9 @@ export async function apiFetch<T = unknown>(
 
   const token = getToken();
 
-  if (token && options.auth !== false) {
+  // FIX: Authorization тільки для auth-ендпоінтів.
+  // Data-ендпоінти публічні і не потребують токена.
+  if (token && options.auth !== false && !isDataPath(path)) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
