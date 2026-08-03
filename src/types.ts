@@ -209,6 +209,9 @@ export interface NightWindow {
   region: string;
   started: Nullable<TimestampISO>;
   ended: Nullable<TimestampISO>;
+
+  // Некоторые ответы могут возвращать флаг активной тревоги окна.
+  alert?: boolean;
 }
 
 export interface NightResponse {
@@ -537,9 +540,30 @@ export interface SourceStatusEntry {
   updated_at?: TimestampISO;
 }
 
-export interface AdminSourceStatusEntry
-  extends ChannelSource,
-    Partial<SourceStatusEntry> {}
+//
+// Специально более мягкий тип для админки,
+// потому что API может отдавать kind как string.
+//
+export interface AdminSourceStatusEntry {
+  handle: string;
+
+  kind: string;
+
+  weight: number;
+
+  active: number;
+
+  notes?: Nullable<string>;
+
+  created_at?: TimestampISO;
+  updated_at?: Nullable<TimestampISO>;
+
+  last_success_at?: Nullable<TimestampISO>;
+  last_error?: Nullable<string>;
+
+  last_posts_count?: number;
+  last_events_count?: number;
+}
 
 export interface AdminSourceStatusResponse {
   ok: boolean;
