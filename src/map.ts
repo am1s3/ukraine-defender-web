@@ -64,13 +64,11 @@ export class ThreatMap {
       attributionControl: false
     });
 
-    // Тёмный tile слой
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
       maxZoom: 19
     }).addTo(this.map);
 
     this.eventMarkers = L.layerGroup().addTo(this.map);
-
     this.createRegionCircles();
   }
 
@@ -107,7 +105,7 @@ export class ThreatMap {
         weight: region.alert ? 4 : 2
       });
 
-      // 🔧 FIX: кастим к HTMLElement для доступа к style
+      // Пульсация для активных тривог
       const el = layer.getElement();
       if (el) {
         const htmlEl = el as HTMLElement;
@@ -120,7 +118,6 @@ export class ThreatMap {
     }
   }
 
-  // Показать события на карте
   updateEvents(events: ThreatEvent[]) {
     this.eventMarkers.clearLayers();
 
