@@ -2,14 +2,15 @@
 // Ukraine Defender — main.ts
 // FULL FILE
 //
-// Главный вход:
-// - карта / тревоги / события / отчёт;
+// Головний вхід:
+// - карта / тривоги / події / звіт;
 // - loader;
 // - auth UI;
 // - theme / i18n;
 // - support / admin / donate;
 // - user menu;
 // - polling;
+// - лента цілей КОНКРЕТНО по області;
 // - service worker.
 // ============================================================
 
@@ -139,6 +140,150 @@ function showToast(
       { once: true }
     );
   }, 3200);
+}
+
+// ============================================================
+// REGION FILTER FOR EVENT FEED
+// ============================================================
+
+const REGION_FOR_TOPONYM: Record<string, string> = {
+  // KYIV CITY
+  kyiv: "kyiv_city",
+  troieshchyna: "kyiv_city",
+  solomianka: "kyiv_city",
+  podil: "kyiv_city",
+  darnytsia: "kyiv_city",
+  sviatoshyn: "kyiv_city",
+  holosiiv: "kyiv_city",
+  obolon: "kyiv_city",
+  pechersk: "kyiv_city",
+  pozniaky: "kyiv_city",
+  desna: "kyiv_city",
+
+  // KYIV OBLAST
+  brovary: "kyiv_oblast",
+  irpin: "kyiv_oblast",
+  bucha: "kyiv_oblast",
+  hostomel: "kyiv_oblast",
+  vyshhorod: "kyiv_oblast",
+  obukhiv: "kyiv_oblast",
+  boryspil: "kyiv_oblast",
+  knyazhychi: "kyiv_oblast",
+  vplyka_dymerska: "kyiv_oblast",
+  slavutych: "kyiv_oblast",
+
+  // DNIPRO REGION
+  dnipro: "dnipro",
+  kryvyi_rih: "dnipro",
+  nikopol: "dnipro",
+  pavlohrad: "dnipro",
+
+  // KHARKIV
+  kharkiv: "kharkiv",
+  izium: "kharkiv",
+  lozova: "kharkiv",
+
+  // ODESA
+  odesa: "odesa",
+
+  // SUMY
+  sumy: "sumy",
+  okhtyrka: "sumy",
+  konotop: "sumy",
+  shostka: "sumy",
+
+  // ZAPORIZHZHIA
+  zaporizhzhia: "zaporizhzhia",
+  melitopol: "zaporizhzhia",
+  berdyansk: "zaporizhzhia",
+
+  // MYKOLAIV
+  mykolaiv: "mykolaiv",
+
+  // KHERSON
+  kherson: "kherson",
+
+  // POLTAVA
+  poltava: "poltava",
+  kremenchuk: "poltava",
+
+  // CHERKASY
+  cherkasy: "cherkasy",
+
+  // CHERNIHIV
+  chernihiv: "chernihiv",
+
+  // ZHYTOMYR
+  zhytomyr: "zhytomyr",
+
+  // VINNYTSIA
+  vinnytsia: "vinnytsia",
+
+  // KHMELNYTSKYI
+  khmelnytskyi: "khmelnytskyi",
+
+  // RIVNE
+  rivne: "rivne",
+
+  // TERNOPIL
+  ternopil: "ternopil",
+
+  // LVIV
+  lviv: "lviv",
+
+  // IVANO-FRANKIVSK
+  ivano_frankivsk: "ivano_frankivsk",
+
+  // ZAKARPATTIA
+  uzhhorod: "zakarpattia",
+
+  // VOLYN
+  lutsk: "volyn",
+
+  // DONETSK
+  donetsk: "donetsk",
+
+  // LUHANSK
+  luhansk: "luhansk",
+
+  // KIROVOHRAD
+  kropyvnytskyi: "kirovohrad",
+
+  // CHERNIVTSI
+  chernivtsi: "chernivtsi"
+};
+
+function eventBelongsToRegion(
+  e: ThreatEvent,
+  region: string
+): boolean {
+  const toponymRegion = e.toponym_key
+    ? REGION_FOR_TOPONYM[e.toponym_key]
+    : null;
+
+  if (region === "kyiv") {
+    return (
+      toponymRegion === "kyiv_city" ||
+      toponymRegion === "kyiv_oblast"
+    );
+  }
+
+  if (region === "kyiv_city") {
+    return toponymRegion === "kyiv_city";
+  }
+
+  if (region === "kyiv_oblast") {
+    return toponymRegion === "kyiv_oblast";
+  }
+
+  return toponymRegion === region;
+}
+
+function filterEventsByRegion(
+  events: ThreatEvent[],
+  region: string
+): ThreatEvent[] {
+  return events.filter((e) => eventBelongsToRegion(e, region));
 }
 
 // ============================================================
@@ -341,7 +486,8 @@ document.querySelectorAll("[data-auth-close]").forEach((node) => {
 
 document.querySelectorAll("[data-auth-switch]").forEach((node) => {
   node.addEventListener("click", () => {
-    const view = (node as HTMLElement).dataset.authSwitch || "login";
+    const view =
+      (node as HTMLElement).dataset.authSwitch || "login";
 
     showAuthView(view);
   });
@@ -420,7 +566,10 @@ registerForm.addEventListener("submit", async (event) => {
   const passwordRepeat = registerPasswordRepeat.value;
 
   if (password.length < 8) {
-    showMessage(registerMessage, "Password must be at least 8 characters.");
+    showMessage(
+      registerMessage,
+      "Password must be at least 8 characters."
+    );
     return;
   }
 
@@ -494,7 +643,10 @@ resetForm.addEventListener("submit", async (event) => {
   const passwordRepeat = resetPasswordRepeat.value;
 
   if (password.length < 8) {
-    showMessage(resetMessage, "Password must be at least 8 characters.");
+    showMessage(
+      resetMessage,
+      "Password must be at least 8 characters."
+    );
     return;
   }
 
@@ -512,7 +664,11 @@ resetForm.addEventListener("submit", async (event) => {
 
     showAuthView("login");
 
-    showMessage(loginMessage, "Password changed. Please sign in.", true);
+    showMessage(
+      loginMessage,
+      "Password changed. Please sign in.",
+      true
+    );
   } catch (error) {
     showMessage(
       resetMessage,
@@ -617,11 +773,13 @@ function closeAbout(): void {
   aboutOverlay.dataset.open = "false";
 }
 
-document.querySelectorAll("[data-nav-close='about']").forEach((node) => {
-  node.addEventListener("click", () => {
-    closeAbout();
+document
+  .querySelectorAll("[data-nav-close='about']")
+  .forEach((node) => {
+    node.addEventListener("click", () => {
+      closeAbout();
+    });
   });
-});
 
 // ============================================================
 // REPORT
@@ -641,32 +799,38 @@ async function openSummary(): Promise<void> {
 // NAVIGATION
 // ============================================================
 
-document.querySelectorAll<HTMLElement>("[data-nav]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const nav = btn.dataset.nav;
+document
+  .querySelectorAll<HTMLElement>("[data-nav]")
+  .forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nav = btn.dataset.nav;
 
-    if (nav === "report") {
-      void openSummary();
-      return;
-    }
+      if (nav === "report") {
+        void openSummary();
+        return;
+      }
 
-    if (nav === "about") {
-      openAbout();
-      return;
-    }
+      if (nav === "about") {
+        openAbout();
+        return;
+      }
 
-    if (nav === "support") {
-      openSupport();
-      return;
-    }
+      if (nav === "support") {
+        openSupport();
+        return;
+      }
 
-    // donate навешен в donate.ts
+      // donate навешен в donate.ts
+    });
   });
-});
 
 // ============================================================
 // ESCAPE CLOSE
 // ============================================================
+
+const adminOverlay = $<HTMLDivElement>("adminOverlay");
+const supportOverlay = $<HTMLDivElement>("supportOverlay");
+const donateOverlay = $<HTMLDivElement>("donateOverlay");
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
@@ -746,127 +910,8 @@ async function pollEvents(): Promise<void> {
 
     lastEvents = data.events;
 
+    // Траєкторії — глобальні.
     map?.setTrajectories(lastEvents);
 
     if (drawer.isOpen()) {
-      drawer.setEvents(lastEvents);
-    }
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
-
-    console.error("events failed", message);
-
-    if (drawer.isOpen()) {
-      drawer.setError(message);
-    }
-  }
-}
-
-async function poll(): Promise<void> {
-  try {
-    const data = await fetchAlerts();
-
-    lastData = data;
-
-    map?.render(data.regions);
-
-    updateStatusStrip(data);
-
-    const openKey = drawer.currentKey();
-
-    if (openKey) {
-      const region = data.regions.find((x) => x.key === openKey);
-
-      if (region) {
-        drawer.updateRegion(region);
-      }
-    }
-  } catch (error) {
-    console.error("poll failed", error);
-  }
-}
-
-// ============================================================
-// OVERLAY ELEMENT REFERENCES FOR ESCAPE
-// ============================================================
-
-const adminOverlay = $<HTMLDivElement>("adminOverlay");
-const supportOverlay = $<HTMLDivElement>("supportOverlay");
-const donateOverlay = $<HTMLDivElement>("donateOverlay");
-
-// ============================================================
-// MAP INIT
-// ============================================================
-
-map = new ThreatMap("map", (key) => {
-  const region = lastData?.regions.find((x) => x.key === key);
-
-  if (region) {
-    drawer.open(region);
-
-    void pollEvents();
-  }
-});
-
-const originalDrawerOpen = drawer.open.bind(drawer);
-
-drawer.open = (region) => {
-  originalDrawerOpen(region);
-
-  map?.clearPin();
-
-  void pollEvents();
-};
-
-const originalDrawerClose = drawer.close.bind(drawer);
-
-drawer.close = () => {
-  originalDrawerClose();
-
-  map?.clearPin();
-};
-
-// ============================================================
-// INIT
-// ============================================================
-
-initLoader();
-
-initI18n();
-
-initTheme();
-
-initSupport();
-
-initAdmin();
-
-initDonate();
-
-void initAuth().then(() => {
-  renderAuthState();
-});
-
-renderAuthState();
-
-void poll();
-
-void pollEvents();
-
-setInterval(() => {
-  void poll();
-}, 5000);
-
-setInterval(() => {
-  void pollEvents();
-}, 12000);
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.warn("sw register failed", error);
-    });
-  });
-}
-
-markLoaderReady();
+      // Лента — конкрет
