@@ -1,19 +1,11 @@
 import L from "leaflet";
 import type { Region, ThreatEvent } from "./types";
 
-// ============================================================
-// ЦВЕТА РЕГИОНОВ
-// ============================================================
-
 const REGION_COLORS = {
   calm: { fill: "#1e3a5f", stroke: "#35c4ff", opacity: 0.4 },
   alert: { fill: "#ff3b3b", stroke: "#ff6b6b", opacity: 0.7 },
   unknown: { fill: "#2a2a3e", stroke: "#4a4a5e", opacity: 0.3 }
 };
-
-// ============================================================
-// КООРДИНАТЫ ОБЛАСТНЫХ ЦЕНТРОВ
-// ============================================================
 
 const REGION_CENTERS: Record<string, [number, number]> = {
   kyiv_city: [50.4501, 30.5234],
@@ -44,13 +36,9 @@ const REGION_CENTERS: Record<string, [number, number]> = {
   crimea: [44.9521, 34.1024]
 };
 
-// ============================================================
-// ГЛАВНЫЙ КЛАСС КАРТЫ
-// ============================================================
-
 export class ThreatMap {
   private map: L.Map;
-  private regionLayers: Map<string, L.Layer> = new Map();
+  private regionLayers: Map<string, L.Circle> = new Map();
   private eventMarkers: L.LayerGroup;
   private onRegionClick: (key: string) => void;
 
@@ -64,14 +52,11 @@ export class ThreatMap {
       attributionControl: false
     });
 
-    // Тёмный тайл
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
       maxZoom: 19
     }).addTo(this.map);
 
     this.eventMarkers = L.layerGroup().addTo(this.map);
-
-    // Создаём круги для регионов (упрощённо вместо GeoJSON)
     this.createRegionCircles();
   }
 
@@ -91,16 +76,15 @@ export class ThreatMap {
     }
   }
 
-  // 🔥 ГЛАВНЫЙ МЕТОД: обновление цветов регионов по тривогам
   updateAlerts(regions: Region[]) {
     console.log(`[Map] Updating ${regions.length} regions, ${regions.filter(r => r.alert).length} alerts`);
-    
+
     for (const region of regions) {
       const layer = this.regionLayers.get(region.key);
-      if (!layer || !(layer instanceof L.Circle)) continue;
+      if (!layer) continue;
 
       const colors = region.alert ? REGION_COLORS.alert : REGION_COLORS.calm;
-      
+
       layer.setStyle({
         color: colors.stroke,
         fillColor: colors.fill,
@@ -108,28 +92,23 @@ export class ThreatMap {
         weight: region.alert ? 4 : 2
       });
 
-      // Пульсация для активных тривог
-      if (region.alert) {
-        const el = layer.getElement();
-        if (el) {
+      const el = layer.getElement();
+      if (el) {
+        if (region.alert) {
           el.style.animation = "regionPulse 1.5s ease-in-out infinite";
-        }
-      } else {
-        const el = layer.getElement();
-        if (el) {
+        } else {
           el.style.animation = "none";
         }
       }
     }
   }
 
-  // Показать события на карте
   updateEvents(events: ThreatEvent[]) {
     this.eventMarkers.clearLayers();
 
     for (const event of events) {
       if (!event.toponym_key) continue;
-      
+
       const coords = REGION_CENTERS[event.toponym_key];
       if (!coords) continue;
 
@@ -139,7 +118,7 @@ export class ThreatMap {
     }
   }
 
-  private getEventIcon(type: string): L.Icon {
+  private getEventIcon(type: string): L.DivIcon {
     const emojis: Record<string, string> = {
       shahed: "🚁",
       ballistic: "🚀",
@@ -173,16 +152,12 @@ export class ThreatMap {
 
   setHighlight(regionKey: string) {
     const layer = this.regionLayers.get(regionKey);
-    if (layer && layer instanceof L.Circle) {
-      layer.setStyle({ weight: 5 });
-    }
+    if (layer) layer.setStyle({ weight: 5 });
   }
 
   flyToponym(regionKey: string) {
     const coords = REGION_CENTERS[regionKey];
-    if (coords) {
-      this.map.flyTo(coords, 8, { duration: 0.8 });
-    }
+    if (coords) this.map.flyTo(coords, 8, { duration: 0.8 });
   }
 
   invalidateSize() {
