@@ -112,6 +112,23 @@ svg path:focus-visible {
   top: calc(var(--header-h) + 8px) !important;
 }
 
+.leaflet-container {
+  background: var(--bg-0);
+}
+
+.leaflet-tooltip {
+  background: rgba(11, 18, 32, 0.92);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="light"] .leaflet-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  color: #14202f;
+}
+
 /* ============================================================
    TOPBAR
    ============================================================ */
@@ -136,7 +153,7 @@ svg path:focus-visible {
 }
 
 html[data-theme="light"] .topbar__row {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.86));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.88));
 }
 
 .brand {
@@ -195,6 +212,7 @@ html[data-theme="light"] .topbar__row {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 1px;
+  color: var(--text);
 }
 
 .clock__tz {
@@ -236,6 +254,10 @@ html[data-theme="light"] .topbar__row {
 .nav-btn--accent:hover {
   background: rgba(53, 196, 255, 0.12);
   color: #fff;
+}
+
+html[data-theme="light"] .nav-btn {
+  background: rgba(255, 255, 255, 0.6);
 }
 
 html[data-theme="light"] .nav-btn--accent:hover {
@@ -309,10 +331,6 @@ html[data-theme="light"] .nav-btn--accent:hover {
   position: fixed;
   inset: 0;
   top: 0;
-  background: var(--bg-0);
-}
-
-.leaflet-container {
   background: var(--bg-0);
 }
 
@@ -391,6 +409,11 @@ html[data-theme="light"] .nav-btn--accent:hover {
   box-shadow: 0 0 18px rgba(53, 196, 255, 0.35);
 }
 
+html[data-theme="light"] .traj-btn {
+  color: #152232;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(240, 245, 251, 0.95));
+}
+
 .eta-wrap.leaflet-div-icon {
   background: transparent !important;
   border: none !important;
@@ -409,6 +432,12 @@ html[data-theme="light"] .nav-btn--accent:hover {
   background: rgba(11, 18, 32, 0.92);
   border: 1px solid var(--line);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+}
+
+html[data-theme="light"] .eta {
+  background: rgba(255, 255, 255, 0.92);
+  color: #14202f;
 }
 
 /* ============================================================
@@ -998,6 +1027,10 @@ html[data-theme="light"] .ev-row__dir b {
   overflow: hidden;
 }
 
+html[data-theme="light"] .consensus__bar {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 .consensus__fill {
   display: block;
   height: 100%;
@@ -1161,6 +1194,10 @@ html[data-theme="light"] .ev-row__dir b {
   backdrop-filter: blur(8px);
 }
 
+html[data-theme="light"] .report-overlay__backdrop {
+  background: rgba(15, 25, 40, 0.45);
+}
+
 .report {
   position: relative;
   z-index: 1;
@@ -1178,6 +1215,13 @@ html[data-theme="light"] .ev-row__dir b {
   padding: 20px 22px 18px;
   transform: translateY(14px) scale(0.98);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-theme="light"] .report {
+  background:
+    linear-gradient(rgba(53, 130, 255, 0.05) 1px, transparent 1px) 0 0 / 100% 28px,
+    linear-gradient(90deg, rgba(53, 130, 255, 0.05) 1px, transparent 1px) 0 0 / 28px 100%,
+    linear-gradient(180deg, #ffffff, #f3f7fc);
 }
 
 .report-overlay[data-open="true"] .report {
@@ -1334,6 +1378,10 @@ html[data-theme="light"] .rp-counter__n {
   background: rgba(255, 255, 255, 0.07);
   border-radius: 6px;
   overflow: hidden;
+}
+
+html[data-theme="light"] .rp-bar__track {
+  background: rgba(0, 0, 0, 0.07);
 }
 
 .rp-bar__fill {
@@ -1512,6 +1560,10 @@ html[data-theme="light"] .rp-counter__n {
   backdrop-filter: blur(8px);
 }
 
+html[data-theme="light"] .about-overlay__backdrop {
+  background: rgba(15, 25, 40, 0.45);
+}
+
 .about {
   position: relative;
   z-index: 1;
@@ -1528,6 +1580,12 @@ html[data-theme="light"] .rp-counter__n {
   padding: 22px 24px 20px;
   transform: translateY(14px) scale(0.98);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-theme="light"] .about {
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(53, 130, 255, 0.08), transparent 55%),
+    linear-gradient(180deg, #ffffff, #f2f6fb);
 }
 
 .about-overlay[data-open="true"] .about {
@@ -1761,6 +1819,11 @@ html[data-theme="light"] .rp-counter__n {
   pointer-events: auto;
 }
 
+html[data-theme="light"] .toast {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(243, 247, 251, 0.97));
+  color: #152232;
+}
+
 .toast--warn {
   border-left-color: var(--amber);
 }
@@ -1879,6 +1942,16 @@ html[data-theme="light"] .rp-counter__n {
   position: relative;
 }
 
+/* Hover-мост, чтобы меню не закрывалось, пока курсор летит к нему. */
+.user-area::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 14px;
+}
+
 .user-menu-btn {
   display: inline-flex;
   align-items: center;
@@ -1892,6 +1965,10 @@ html[data-theme="light"] .rp-counter__n {
   border-radius: 10px;
   padding: 9px 12px;
   transition: all 0.16s ease;
+}
+
+html[data-theme="light"] .user-menu-btn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(244, 247, 251, 0.95));
 }
 
 .user-menu-btn:hover,
@@ -1909,6 +1986,12 @@ html[data-theme="light"] .user-area[data-open="true"] .user-menu-btn {
 .user-menu-btn__arrow {
   color: var(--muted);
   font-size: 10px;
+  transition: transform 0.18s ease;
+}
+
+.user-area[data-open="true"] .user-menu-btn__arrow,
+.user-area:hover .user-menu-btn__arrow {
+  transform: rotate(180deg);
 }
 
 .user-menu {
@@ -1917,7 +2000,7 @@ html[data-theme="light"] .user-area[data-open="true"] .user-menu-btn {
   right: 0;
   z-index: 1300;
   width: 230px;
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px;
@@ -1926,6 +2009,15 @@ html[data-theme="light"] .user-area[data-open="true"] .user-menu-btn {
   border-radius: 14px;
   box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(10px);
+
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.18s;
 }
 
 html[data-theme="light"] .user-menu {
@@ -1935,7 +2027,10 @@ html[data-theme="light"] .user-menu {
 .user-area:hover .user-menu,
 .user-area:focus-within .user-menu,
 .user-area[data-open="true"] .user-menu {
-  display: flex;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
 }
 
 .user-menu button {
@@ -2189,6 +2284,13 @@ html[data-theme="light"] .ud-btn:hover {
   box-shadow: none;
 }
 
+.ud-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .ud-row {
   display: flex;
   gap: 10px;
@@ -2357,6 +2459,10 @@ html[data-theme="light"] .ud-message--ok {
   padding: 12px;
 }
 
+html[data-theme="light"] .support-message {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .support-message--admin {
   border-color: rgba(53, 196, 255, 0.32);
   background: rgba(53, 196, 255, 0.07);
@@ -2395,6 +2501,17 @@ html[data-theme="light"] .ud-message--ok {
   border: 1px dashed var(--line);
   border-radius: 12px;
   padding: 10px 12px;
+}
+
+.donate__qr {
+  margin-top: 14px;
+  width: 220px;
+  height: 220px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px;
+  display: block;
 }
 
 /* ============================================================
@@ -2492,32 +2609,6 @@ html[data-theme="light"] .admin__stat b {
   font-size: 13px;
   line-height: 1.5;
   padding: 12px 2px;
-}
-
-/* ============================================================
-   LIGHT THEME EXTRA
-   ============================================================ */
-
-html[data-theme="light"] .drawer,
-html[data-theme="light"] .report,
-html[data-theme="light"] .about {
-  background:
-    radial-gradient(120% 60% at 0% 0%, rgba(53, 130, 255, 0.06), transparent 55%),
-    linear-gradient(180deg, #ffffff, #f3f7fc);
-}
-
-html[data-theme="light"] .toast {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(243, 247, 251, 0.97));
-  color: #152232;
-}
-
-html[data-theme="light"] .traj-btn {
-  color: #152232;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(240, 245, 251, 0.95));
-}
-
-html[data-theme="light"] .eta {
-  background: rgba(255, 255, 255, 0.92);
 }
 
 /* ============================================================
