@@ -58,7 +58,9 @@ const ISO_MAP: Record<string, string> = {
   "UA-07": "volyn",
   "UA-21": "zakarpattia",
   "UA-23": "zaporizhzhia",
-  "UA-18": "zhytomyr"
+  "UA-18": "zhytomyr",
+  "UA-43": "crimea",
+  "UA-40": "crimea"
 };
 
 const REGION_CENTERS: Record<string, [number, number]> = {
@@ -86,7 +88,8 @@ const REGION_CENTERS: Record<string, [number, number]> = {
   cherkasy: [49.44, 32.06],
   chernivtsi: [48.29, 25.94],
   chernihiv: [51.49, 31.29],
-  kyiv_city: [50.45, 30.52]
+  kyiv_city: [50.45, 30.52],
+  crimea: [45.3, 34.0]
 };
 
 const UA_NAMES: Record<string, string> = {
@@ -114,7 +117,8 @@ const UA_NAMES: Record<string, string> = {
   cherkasy: "Черкаська",
   chernivtsi: "Чернівецька",
   chernihiv: "Чернігівська",
-  kyiv_city: "Київ"
+  kyiv_city: "Київ",
+  crimea: "Крим · це Україна"
 };
 
 // ============================================================
@@ -127,6 +131,7 @@ function matchByName(raw: string): string | null {
   if (!low) return null;
 
   const TABLE: Array<[string, string[]]> = [
+    ["crimea", ["crimea", "крим", "sevastopol", "севастопол"]],
     ["kyiv_city", ["kyiv city", "kiev city", "kyyiv city", "місто київ", "м. київ", "м київ", "kyiv municipality"]],
     ["kyiv_oblast", ["kyiv oblast", "kiev oblast", "kyyivs", "київськ", "київщин"]],
     ["cherkasy", ["cherkas", "черкаськ"]],
@@ -301,7 +306,7 @@ function isEventFresh(e: ThreatEvent): boolean {
 }
 
 // ============================================================
-// SVG DEFS (hatch pattern)
+// SVG DEFS (hatch + crimea flag)
 // ============================================================
 
 function injectSvgDefs(): void {
@@ -331,6 +336,16 @@ function injectSvgDefs(): void {
       >
         <rect width="8" height="8" fill="rgba(255,45,45,0.10)"></rect>
         <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,45,45,0.75)" stroke-width="3"></line>
+      </pattern>
+
+      <pattern
+        id="ud-crimea-flag"
+        patternUnits="objectBoundingBox"
+        width="1"
+        height="1"
+      >
+        <rect x="0" y="0" width="1" height="0.5" fill="#0057b7"></rect>
+        <rect x="0" y="0.5" width="1" height="0.5" fill="#ffd700"></rect>
       </pattern>
     </defs>
   `;
@@ -519,7 +534,7 @@ export class ThreatMap {
       }).addTo(this.trajLayer);
 
       line.bindTooltip(
-        `${TYPE_ICON[e.threat_type] || ""} ${e.threat_type} · ${src.name} → ${dst.name}`,
+        `${e.threat_type} · ${src.name} → ${dst.name}`,
         { sticky: true }
       );
 
@@ -537,10 +552,7 @@ export class ThreatMap {
         interactive: false,
         icon: L.divIcon({
           className: "eta-wrap",
-          html: `${TYPE_ICON[e.threat_type] || ""} ${etaLabel(
-            e.threat_type,
-            km
-          )}`,
+          html: `<span style="color:${color};display:inline-flex;gap:4px;align-items:center;">${TYPE_ICON[e.threat_type]}<span class="eta">${etaLabel(e.threat_type, km)}</span></span>`,
           iconSize: [0, 0]
         })
       }).addTo(this.trajLayer);
@@ -586,11 +598,21 @@ export class ThreatMap {
   // ----------------------------------------------------------
 
   private styleFor(key: string | null): L.PathOptions {
+    // Крым — всегда флаг.
+    if (key === "crimea") {
+      return {
+        color: "#0057b7",
+        weight: 2,
+        fillColor: "url(#ud-crimea-flag)",
+        fillOpacity: 0.85
+      };
+    }
+
     const r = key ? this.regionMap.get(key) : undefined;
 
     const alert = r?.alert ?? false;
-    const active = r?.active ?? false;
 
+    // Тривога — красная штриховка.
     if (alert) {
       return {
         color: "#ff5a5a",
@@ -600,43 +622,34 @@ export class ThreatMap {
       };
     }
 
-    if (active) {
-      return {
-        color: "#2ee6a6",
-        weight: 1.5,
-        fillColor: "#2ee6a6",
-        fillOpacity: 0.22
-      };
-    }
-
+    // Нет тривоги — НЕ помечаем ничем.
     return {
       color: "#33455f",
       weight: 1,
       fillColor: "#16223a",
-      fillOpacity: 0.42
+      fillOpacity: 0
     };
   }
 
   private markerStyle(key: string): L.PathOptions {
+    if (key === "crimea") {
+      return {
+        color: "#0057b7",
+        fillColor: "#ffd700",
+        fillOpacity: 0.8,
+        opacity: 1
+      };
+    }
+
     const r = this.regionMap.get(key);
 
     const alert = r?.alert ?? false;
-    const active = r?.active ?? false;
 
     if (alert) {
       return {
         color: "#ff5a5a",
         fillColor: "#ff2d2d",
-        fillOpacity: active ? 0.55 : 0.4,
-        opacity: 1
-      };
-    }
-
-    if (active) {
-      return {
-        color: "#2ee6a6",
-        fillColor: "#2ee6a6",
-        fillOpacity: 0.45,
+        fillOpacity: 0.5,
         opacity: 1
       };
     }
@@ -644,7 +657,7 @@ export class ThreatMap {
     return {
       color: "#33455f",
       fillColor: "#16223a",
-      fillOpacity: 0.5,
+      fillOpacity: 0,
       opacity: 0.7
     };
   }
@@ -730,15 +743,15 @@ export class ThreatMap {
           layer.on("click", () => this.onSelect(key));
 
           layer.on("mouseover", () =>
-            (layer as L.Path).setStyle({ weight: 3, fillOpacity: 0.62 })
+            (layer as L.Path).setStyle({ weight: 3 })
           );
 
           layer.on("mouseout", () => this.geoLayer?.resetStyle(layer));
 
-          layer.bindTooltip(
-            UA_NAMES[key] ?? (f.properties as any)?.shapeName ?? "",
-            { sticky: true, direction: "top" }
-          );
+          layer.bindTooltip(UA_NAMES[key] ?? (f.properties as any)?.shapeName ?? "", {
+            sticky: true,
+            direction: "top"
+          });
         }
       }).addTo(this.map);
 
