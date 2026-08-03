@@ -2,28 +2,61 @@
 // Ukraine Defender — api.ts
 // FULL FILE
 //
-// Единый API-слой:
-// - данные карты / тревоги / события / ночной отчёт;
-// - auth;
-// - support;
-// - admin;
-// - settings;
-// - reports;
-// - analytics.
+// Прямые адреса, без env-переменных и без прокси:
+// - DATA_API_BASE  → тревоги / события / посты / night;
+// - AUTH_API_BASE  → auth / support / admin / settings.
 // ============================================================
 
 import type {
   AlertResponse,
   ThreatEvent,
-  NightResponse
+  NightResponse,
+  AuthUser,
+  AuthResponse,
+  MeResponse,
+  RegisterPayload,
+  LoginPayload,
+  ProfilePatch,
+  PasswordForgotPayload,
+  PasswordForgotResponse,
+  PasswordResetPayload,
+  SupportTicket,
+  SupportMessage,
+  SupportTicketDetailResponse,
+  SupportTicketListResponse,
+  CreateSupportTicketPayload,
+  AdminUser,
+  AdminUsersResponse,
+  AdminTicketListResponse,
+  AdminAnalyticsSummary,
+  AdminAnalyticsResponse,
+  AdminLogEntry,
+  AdminLogsResponse,
+  AdminSourceStatusEntry,
+  AdminSourceStatusResponse,
+  EventReport,
+  AdminEventReportsResponse,
+  CreateEventReportPayload,
+  SettingRow,
+  AdminSettingsResponse,
+  PublicSettingsResponse,
+  PublicSourceStatusResponse,
+  AdminChannelUpdatePayload,
+  HealthResponse,
+  UserRole,
+  SupportTicketStatus,
+  EventReportStatus
 } from "./types";
 
 // ============================================================
-// CONFIG
+// DIRECT ENDPOINTS
 // ============================================================
 
-const API_BASE =
-  ((import.meta as any).env?.VITE_API_BASE as string | undefined) ?? "";
+const DATA_API_BASE =
+  "https://ukraine-defender-data.shushko-art.workers.dev";
+
+const AUTH_API_BASE =
+  "https://ukraine-defender-api.shushko-art.workers.dev";
 
 const TOKEN_KEY = "ud_token";
 
@@ -79,8 +112,6 @@ export function clearToken(): void {
 // ROLE HELPERS
 // ============================================================
 
-export type UserRole = "user" | "support" | "admin" | "owner";
-
 export function isStaffRole(role?: string | null): boolean {
   return !!role && ["support", "admin", "owner"].includes(role);
 }
@@ -97,12 +128,7 @@ export function isOwnerRole(role?: string | null): boolean {
 // URL / FETCH CORE
 // ============================================================
 
-type QueryValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined;
+type QueryValue = string | number | boolean | null | undefined;
 
 type QueryParams = Record<string, QueryValue>;
 
@@ -114,11 +140,19 @@ export interface ApiRequestOptions {
   timeoutMs?: number;
 }
 
-function buildUrl(path: string, query?: QueryParams): string {
-  const base = API_BASE.replace(/\/+$/, "");
-  const rawUrl = `${base}${path}`;
+// Данные карты идут в data-воркер, всё остальное — в auth-воркер.
+function baseFor(path: string): string {
+  if (/^\/api\/(alerts|events|posts|night)/.test(path)) {
+    return DATA_API_BASE;
+  }
 
-  const url = new URL(rawUrl, window.location.origin);
+  return AUTH_API_BASE;
+}
+
+function buildUrl(path: string, query?: QueryParams): string {
+  const base = baseFor(path).replace(/\/+$/, "");
+
+  const url = new URL(`${base}${path}`, window.location.origin);
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -201,94 +235,8 @@ export async function apiFetch<T = unknown>(
 }
 
 // ============================================================
-// PUBLIC TYPES
+// DATA / MAP / EVENTS  (DATA WORKER)
 // ============================================================
-
-export type ThemePreference = "dark" | "light" | "system";
-export type LanguagePreference = "uk" | "en";
-
-export interface AuthUser {
-  id: number;
-  nickname: string;
-  email: string;
-  role: UserRole;
-  theme: ThemePreference;
-  lang: LanguagePreference;
-  is_active: number;
-  created_at?: string;
-  updated_at?: string;
-  last_seen_at?: string | null;
-}
-
-export interface AuthResponse {
-  ok: boolean;
-  token: string;
-  user: AuthUser;
-}
-
-export interface MeResponse {
-  ok: boolean;
-  user: AuthUser;
-  unread_support_tickets?: number;
-}
-
-export interface PublicSettingsResponse {
-  ok: boolean;
-  settings: Record<string, string>;
-}
-
-export interface HealthResponse {
-  ok: boolean;
-  service?: string;
-  version?: string;
-  ts?: string;
-  db?: boolean;
-  data_proxy?: boolean;
-  groq_keys?: number;
-  channels?: number;
-  active_regions?: number;
-}
-
-// ============================================================
-// DATA / MAP / EVENTS
-// ============================================================
-
-export interface EventsResponse {
-  region: string;
-  channels: string[];
-  posts_scanned: number;
-  events_count: number;
-  events: ThreatEvent[];
-  groq?: {
-    calls: number;
-    cache_hits: number;
-    errors: string[];
-    model: string;
-  };
-  debug_unmatched?: Array<{
-    channel: string;
-    ts: string | null;
-    text: string;
-  }>;
-  errors?: string[];
-  from_cache?: boolean;
-  stale?: boolean;
-  partial?: boolean;
-  error?: string;
-}
-
-export interface PostsResponse {
-  version: string;
-  channel: string;
-  count: number;
-  posts: Array<{
-    id: string;
-    channel: string;
-    text: string;
-    ts: string | null;
-  }>;
-  from_cache?: boolean;
-}
 
 export async function fetchHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/api/health", {
@@ -304,17 +252,21 @@ export async function fetchAlerts(): Promise<AlertResponse> {
 
 export async function fetchEvents(
   region: string = "kyiv"
-): Promise<EventsResponse> {
-  return apiFetch<EventsResponse>("/api/events", {
+): Promise<{
+  region: string;
+  channels: string[];
+  posts_scanned: number;
+  events_count: number;
+  events: ThreatEvent[];
+}> {
+  return apiFetch("/api/events", {
     query: { region },
     timeoutMs: 25000
   });
 }
 
-export async function fetchPosts(
-  channel: string
-): Promise<PostsResponse> {
-  return apiFetch<PostsResponse>("/api/posts", {
+export async function fetchPosts(channel: string) {
+  return apiFetch("/api/posts", {
     query: { channel },
     timeoutMs: 20000
   });
@@ -330,40 +282,8 @@ export async function fetchNight(
 }
 
 // ============================================================
-// AUTH
+// AUTH  (AUTH WORKER)
 // ============================================================
-
-export interface RegisterPayload {
-  nickname: string;
-  email: string;
-  password: string;
-  password_repeat?: string;
-}
-
-export interface LoginPayload {
-  login: string;
-  password: string;
-}
-
-export interface ProfilePatch {
-  theme?: ThemePreference;
-  lang?: LanguagePreference;
-}
-
-export interface PasswordForgotPayload {
-  email: string;
-}
-
-export interface PasswordForgotResponse {
-  ok: boolean;
-  debug_token?: string;
-}
-
-export interface PasswordResetPayload {
-  token: string;
-  password: string;
-  password_repeat?: string;
-}
 
 export function registerUser(
   payload: RegisterPayload
@@ -430,17 +350,8 @@ export function resetPassword(
 }
 
 // ============================================================
-// PUBLIC SETTINGS / SOURCE STATUS
+// PUBLIC SETTINGS / SOURCE STATUS  (AUTH WORKER)
 // ============================================================
-
-export interface PublicSourceStatusResponse {
-  ok: boolean;
-  sources: Array<{
-    handle: string;
-    kind: string;
-    active: number;
-  }>;
-}
 
 export function fetchPublicSettings(): Promise<PublicSettingsResponse> {
   return apiFetch<PublicSettingsResponse>("/api/settings/public", {
@@ -455,67 +366,8 @@ export function fetchPublicSourceStatus(): Promise<PublicSourceStatusResponse> {
 }
 
 // ============================================================
-// SUPPORT
+// SUPPORT  (AUTH WORKER)
 // ============================================================
-
-export type SupportTicketCategory =
-  | "bug"
-  | "map"
-  | "donation"
-  | "channel"
-  | "suggestion"
-  | "other";
-
-export type SupportTicketStatus =
-  | "open"
-  | "answered"
-  | "closed";
-
-export interface SupportTicket {
-  id: number;
-  user_id: number;
-  category: SupportTicketCategory;
-  subject: string;
-  status: SupportTicketStatus;
-  assigned_admin_id?: number | null;
-  created_at: string;
-  updated_at: string;
-  closed_at?: string | null;
-
-  user_nickname?: string;
-  user_email?: string;
-  assigned_admin_nickname?: string | null;
-  last_message?: string | null;
-}
-
-export interface SupportMessage {
-  id: number;
-  ticket_id: number;
-  sender_id: number | null;
-  body: string;
-  is_admin: number;
-  created_at: string;
-
-  nickname?: string | null;
-  role?: UserRole | null;
-}
-
-export interface SupportTicketDetailResponse {
-  ok: boolean;
-  ticket: SupportTicket;
-  messages: SupportMessage[];
-}
-
-export interface SupportTicketListResponse {
-  ok: boolean;
-  tickets: SupportTicket[];
-}
-
-export interface CreateSupportTicketPayload {
-  category: SupportTicketCategory;
-  subject: string;
-  body: string;
-}
 
 export function listSupportTickets(): Promise<SupportTicketListResponse> {
   return apiFetch<SupportTicketListResponse>("/api/support/tickets");
@@ -555,13 +407,8 @@ export function sendSupportMessage(
 }
 
 // ============================================================
-// ADMIN / TICKETS
+// ADMIN / TICKETS  (AUTH WORKER)
 // ============================================================
-
-export interface AdminTicketListResponse {
-  ok: boolean;
-  tickets: SupportTicket[];
-}
 
 export function listAdminTickets(
   status?: SupportTicketStatus | ""
@@ -622,23 +469,8 @@ export function assignAdminTicket(
 }
 
 // ============================================================
-// ADMIN / USERS
+// ADMIN / USERS  (AUTH WORKER)
 // ============================================================
-
-export interface AdminUser {
-  id: number;
-  nickname: string;
-  email: string;
-  role: UserRole;
-  is_active: number;
-  created_at: string;
-  last_seen_at?: string | null;
-}
-
-export interface AdminUsersResponse {
-  ok: boolean;
-  users: AdminUser[];
-}
 
 export function listAdminUsers(): Promise<AdminUsersResponse> {
   return apiFetch<AdminUsersResponse>("/api/admin/users");
@@ -671,55 +503,8 @@ export function setUserActive(
 }
 
 // ============================================================
-// ADMIN / ANALYTICS / SOURCES / LOGS
+// ADMIN / ANALYTICS / SOURCES / LOGS  (AUTH WORKER)
 // ============================================================
-
-export interface AdminAnalyticsSummary {
-  users_total: number;
-  tickets_total: number;
-  tickets_open: number;
-  messages_total: number;
-  events_24h: number;
-  alerts_24h: number;
-  reports_new: number;
-}
-
-export interface AdminAnalyticsResponse {
-  ok: boolean;
-  summary: AdminAnalyticsSummary;
-}
-
-export interface AdminSourceStatus {
-  handle: string;
-  kind: string;
-  weight: number;
-  active: number;
-  notes?: string | null;
-  last_success_at?: string | null;
-  last_error?: string | null;
-  last_posts_count?: number;
-  last_events_count?: number;
-  updated_at?: string | null;
-}
-
-export interface AdminSourceStatusResponse {
-  ok: boolean;
-  sources: AdminSourceStatus[];
-}
-
-export interface AdminLog {
-  id: number;
-  action: string;
-  target?: string | null;
-  details?: string | null;
-  created_at: string;
-  admin_nickname?: string | null;
-}
-
-export interface AdminLogsResponse {
-  ok: boolean;
-  logs: AdminLog[];
-}
 
 export function fetchAdminAnalyticsSummary(): Promise<AdminAnalyticsResponse> {
   return apiFetch<AdminAnalyticsResponse>(
@@ -738,28 +523,8 @@ export function fetchAdminLogs(): Promise<AdminLogsResponse> {
 }
 
 // ============================================================
-// ADMIN / EVENT REPORTS
+// ADMIN / EVENT REPORTS  (AUTH WORKER)
 // ============================================================
-
-export type EventReportStatus =
-  | "new"
-  | "reviewing"
-  | "false"
-  | "resolved";
-
-export interface AdminEventReport {
-  id: number;
-  event_hash?: string | null;
-  comment?: string | null;
-  status: EventReportStatus;
-  created_at: string;
-  reporter_nickname?: string | null;
-}
-
-export interface AdminEventReportsResponse {
-  ok: boolean;
-  reports: AdminEventReport[];
-}
 
 export function fetchAdminEventReports(): Promise<AdminEventReportsResponse> {
   return apiFetch<AdminEventReportsResponse>(
@@ -781,37 +546,8 @@ export function setAdminEventReportStatus(
 }
 
 // ============================================================
-// USER EVENT REPORTS
+// ADMIN / SETTINGS / CHANNELS  (AUTH WORKER)
 // ============================================================
-
-export interface CreateEventReportPayload {
-  event_hash?: string;
-  comment: string;
-}
-
-export function createEventReport(
-  payload: CreateEventReportPayload
-): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>("/api/reports", {
-    method: "POST",
-    body: payload
-  });
-}
-
-// ============================================================
-// ADMIN / SETTINGS
-// ============================================================
-
-export interface AdminSetting {
-  key: string;
-  value: string;
-  updated_at?: string;
-}
-
-export interface AdminSettingsResponse {
-  ok: boolean;
-  settings: AdminSetting[];
-}
 
 export function fetchAdminSettings(): Promise<AdminSettingsResponse> {
   return apiFetch<AdminSettingsResponse>("/api/admin/settings");
@@ -827,24 +563,6 @@ export function updateAdminSetting(
   });
 }
 
-// ============================================================
-// ADMIN / CHANNELS
-// ============================================================
-
-export type ChannelKind =
-  | "universal"
-  | "regional"
-  | "official"
-  | "volunteer";
-
-export interface AdminChannelUpdatePayload {
-  handle: string;
-  kind?: ChannelKind;
-  weight?: number;
-  active?: boolean;
-  notes?: string;
-}
-
 export function updateAdminChannel(
   payload: AdminChannelUpdatePayload
 ): Promise<{ ok: boolean }> {
@@ -855,7 +573,20 @@ export function updateAdminChannel(
 }
 
 // ============================================================
-// ANALYTICS
+// USER EVENT REPORTS  (AUTH WORKER)
+// ============================================================
+
+export function createEventReport(
+  payload: CreateEventReportPayload
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>("/api/reports", {
+    method: "POST",
+    body: payload
+  });
+}
+
+// ============================================================
+// ANALYTICS  (AUTH WORKER)
 // ============================================================
 
 export function trackAnalyticsEvent(
