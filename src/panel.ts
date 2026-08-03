@@ -14,6 +14,7 @@ export class Drawer {
   private closeBtn: HTMLElement;
   private currentRegion: Region | null = null;
   private events: ThreatEvent[] = [];
+  private regions: Region[] = [];
   private opts: DrawerOptions;
 
   constructor(opts: DrawerOptions) {
@@ -39,8 +40,9 @@ export class Drawer {
   }
 
   updateAlerts(regions: Region[]) {
+    this.regions = regions;
     if (!this.currentRegion) return;
-    
+
     const updated = regions.find(r => r.key === this.currentRegion!.key);
     if (updated) {
       this.currentRegion = updated;
@@ -50,9 +52,7 @@ export class Drawer {
 
   updateEvents(events: ThreatEvent[]) {
     this.events = events;
-    if (this.currentRegion) {
-      this.render();
-    }
+    if (this.currentRegion) this.render();
   }
 
   private render() {
@@ -63,8 +63,7 @@ export class Drawer {
 
     const r = this.currentRegion;
     this.titleEl.textContent = r.name_uk;
-    
-    // Статус тривоги
+
     if (r.alert) {
       this.statusEl.textContent = `🚨 ТРИВОГА ${r.duration_sec ? `· ${this.formatDuration(r.duration_sec)}` : ""}`;
       this.statusEl.className = "drawer__status drawer__status--alert";
@@ -73,10 +72,9 @@ export class Drawer {
       this.statusEl.className = "drawer__status drawer__status--calm";
     }
 
-    // Контент
-    const regionEvents = this.events.filter(e => 
-      e.toponym_key === r.key || 
-      e.toponym_raw?.toLowerCase().includes(r.key.toLowerCase())
+    const regionEvents = this.events.filter(e =>
+      e.toponym_key === r.key ||
+      (e.toponym_raw || "").toLowerCase().includes(r.key.replace("_", "").toLowerCase())
     );
 
     if (regionEvents.length === 0) {
@@ -84,15 +82,15 @@ export class Drawer {
         <div class="ev-status ev-status--${r.alert ? "alert" : "calm"}">
           <span class="ev-status__dot"></span>
           <span class="ev-status__label">${r.alert ? "Активна тривога" : "Загрози немає"}</span>
+          ${r.duration_sec ? `<span class="ev-status__timer">${this.formatDuration(r.duration_sec)}</span>` : ""}
         </div>
         <p class="ev-empty">${r.alert ? "Очікуємо деталі від джерел..." : "Наразі все спокійно."}</p>
       `;
       return;
     }
 
-    // Список событий
     const html = regionEvents.map(ev => `
-      <div class="ev-row" data-event-hash="${ev.source.id}">
+      <div class="ev-row">
         <div class="ev-row__bar" style="--accent: ${this.getTypeColor(ev.threat_type)}"></div>
         <div class="ev-row__main">
           <div class="ev-row__top">
@@ -121,7 +119,7 @@ export class Drawer {
         ${r.duration_sec ? `<span class="ev-status__timer">${this.formatDuration(r.duration_sec)}</span>` : ""}
       </div>
       <div class="filters">
-        <button class="chip chip--on">Усі (${regionEvents.length})</button>
+        <span class="chip chip--on">Усі (${regionEvents.length})</span>
       </div>
       <div class="ev-list">${html}</div>
     `;
@@ -129,26 +127,16 @@ export class Drawer {
 
   private getTypeIcon(type: string): string {
     const icons: Record<string, string> = {
-      shahed: "🚁",
-      ballistic: "🚀",
-      cruise: "💫",
-      kab: "💣",
-      aviation: "✈️",
-      recon: "👁",
-      unknown: "⚠️"
+      shahed: "🚁", ballistic: "🚀", cruise: "💫",
+      kab: "💣", aviation: "✈️", recon: "👁", unknown: "⚠️"
     };
     return icons[type] || "⚠️";
   }
 
   private getTypeColor(type: string): string {
     const colors: Record<string, string> = {
-      shahed: "#ff3b3b",
-      ballistic: "#ff6b6b",
-      cruise: "#ffb020",
-      kab: "#ff8c00",
-      aviation: "#35c4ff",
-      recon: "#2ee6a6",
-      unknown: "#8aa0c0"
+      shahed: "#ff3b3b", ballistic: "#ff6b6b", cruise: "#ffb020",
+      kab: "#ff8c00", aviation: "#35c4ff", recon: "#2ee6a6", unknown: "#8aa0c0"
     };
     return colors[type] || "#8aa0c0";
   }
