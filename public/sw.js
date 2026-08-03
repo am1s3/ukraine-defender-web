@@ -1,56 +1,209 @@
-// Ukraine Defender — service worker (оффлайн-оболочка).
-// ВАЖЛИВО: НЕ кешуємо API/тайли — дані тривог мають бути свіжими завжди.
-// Кешуємо лише оболонку (навігації + статику same-origin), щоб застосунок
-// відкривався навіть коли мережа мігнула; дані підтягнуться щойно мережа є.
-const CACHE = "ud-shell-v1";
-const PRECACHE = ["/", "/index.html", "/manifest.webmanifest", "/logo.svg", "/icon.svg"];
+// ============================================================
+// Ukraine Defender — Service Worker
+// FULL FILE
+//
+// Задачи:
+// - оффлайн-оболочка;
+// - кэш статики;
+// - network-first для навигаций;
+// - cache-first для same-origin статики;
+// - НЕ кэшировать API;
+// - НЕ кэшировать тайлы карты;
+// - удаление старых кэшей.
+// ============================================================
+
+const CACHE_NAME = "ud-shell-v3";
+
+const PRECACHE_URLS = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/logo.svg",
+  "/icon.svg"
+];
+
+// ============================================================
+// INSTALL
+// ============================================================
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(PRECACHE)).catch(() => {}).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => {
+        return cache.addAll(PRECACHE_URLS).catch(() => {
+          // Если часть ассетов временно недоступна — не роняем install.
+          return Promise.resolve();
+        });
+      })
+      .then(() => {
+        return self.skipWaiting();
+      })
   );
 });
+
+// ============================================================
+// ACTIVATE
+// ============================================================
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => {
+        return Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        );
+      })
+      .then(() => {
+        return self.clients.claim();
+      })
   );
 });
 
+// ============================================================
+// MESSAGE
+// ============================================================
+
+self.addEventListener("message", (event) => {
+  if (!event.data) return;
+
+  if (event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function isApiRequest(url) {
+  return (
+    url.pathname === "/api" ||
+    url.pathname.startsWith("/api/")
+  );
+}
+
+function isSameOrigin(url) {
+  return url.origin === self.location.origin;
+}
+
+async function offlineResponse() {
+  const cachedRoot = await caches.match("/");
+
+  if (cachedRoot) {
+    return cachedRoot;
+  }
+
+  return new Response("Offline", {
+    status: 503,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8"
+    }
+  });
+}
+
+// ============================================================
+// NAVIGATION STRATEGY
+// network-first, fallback to cached shell
+// ============================================================
+
+async function handleNavigation(request) {
+  try {
+    const response = await fetch(request);
+
+    if (response && response.ok) {
+      const copy = response.clone();
+
+      caches
+        .open(CACHE_NAME)
+        .then((cache) => {
+          return cache.put("/", copy);
+        })
+        .catch(() => {});
+    }
+
+    return response;
+  } catch (error) {
+    const cachedRequest = await caches.match(request);
+
+    if (cachedRequest) {
+      return cachedRequest;
+    }
+
+    return offlineResponse();
+  }
+}
+
+// ============================================================
+// SAME-ORIGIN STATIC STRATEGY
+// cache-first, then network + cache write
+// ============================================================
+
+async function handleSameOriginStatic(request) {
+  const cached = await caches.match(request);
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+
+    if (
+      response &&
+      response.ok &&
+      response.type === "basic"
+    ) {
+      const copy = response.clone();
+
+      caches
+        .open(CACHE_NAME)
+        .then((cache) => {
+          return cache.put(request, copy);
+        })
+        .catch(() => {});
+    }
+
+    return response;
+  } catch (error) {
+    return offlineResponse();
+  }
+}
+
+// ============================================================
+// FETCH
+// ============================================================
+
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-  const url = new URL(req.url);
+  const request = event.request;
 
-  // Навігація: network-first, fallback на кешовану оболонку (оффлайн)
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put("/", copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match(req).then((r) => r || caches.match("/")))
-    );
+  if (request.method !== "GET") {
     return;
   }
 
-  // Same-origin статика (бандл з хешем, svg): cache-first, потім мережа+кеш
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          if (res && res.ok && res.type === "basic") {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        }).catch(() => cached);
-      })
-    );
+  const url = new URL(request.url);
+
+  // API всегда должен идти сетью.
+  if (isApiRequest(url)) {
     return;
   }
 
-  // Cross-origin (API, тайли карти): тільки мережа, без кешу — дані завжди свіжі
+  // Навигации: сеть важнее, оффлайн fallback.
+  if (request.mode === "navigate") {
+    event.respondWith(handleNavigation(request));
+    return;
+  }
+
+  // Статика нашего сайта: можно кэшировать.
+  if (isSameOrigin(url)) {
+    event.respondWith(handleSameOriginStatic(request));
+    return;
+  }
+
+  // Cross-origin: тайлы карты, шрифты, внешние API.
+  // Не кэшируем, чтобы данные всегда были свежими.
+  return;
 });
