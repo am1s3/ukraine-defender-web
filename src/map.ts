@@ -1,20 +1,11 @@
 // ============================================================
 // Ukraine Defender — map.ts
 // FULL FILE
-//
-// Карта:
-// - Leaflet;
-// - регионы + штриховка тревог;
-// - траектории по умолчанию;
-// - иконки целей + стрелки;
-// - TTL устаревших целей;
-// - hover / pin;
-// - fallback маркеры.
 // ============================================================
 
 import L from "leaflet";
 
-import type { Region, ThreatEvent } from "./types";
+import type { Region, ThreatEvent, ThreatType } from "./types";
 
 import { TOPONYM_CENTERS } from "./data/toponym-centers";
 
@@ -230,7 +221,7 @@ function distanceKm(a: [number, number], b: [number, number]): number {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-function etaLabel(type: string, km: number): string {
+function etaLabel(type: ThreatType, km: number): string {
   const speed = SPEED_KMH[type] || 500;
 
   const min = Math.round((km / speed) * 60);
@@ -283,7 +274,7 @@ function arcPoints(
 // TRAJECTORY TTL
 // ============================================================
 
-const TRAJ_TTL_MIN: Record<string, number> = {
+const TRAJ_TTL_MIN: Record<ThreatType, number> = {
   ballistic: 20,
   cruise: 30,
   shahed: 90,
@@ -540,7 +531,6 @@ export class ThreatMap {
 
       const km = distanceKm(src.coord, dst.coord);
 
-      // ETA label at midpoint.
       const mid = pts[Math.floor(pts.length / 2)];
 
       L.marker(mid, {
@@ -555,7 +545,6 @@ export class ThreatMap {
         })
       }).addTo(this.trajLayer);
 
-      // Arrowhead near target.
       const a = pts[Math.floor(pts.length * 0.8)];
       const b = pts[Math.floor(pts.length * 0.9)];
 
@@ -573,7 +562,6 @@ export class ThreatMap {
         })
       }).addTo(this.trajLayer);
 
-      // Launch emitter with threat icon.
       if (!seenLaunch.has(e.launch_key as string)) {
         seenLaunch.add(e.launch_key as string);
 
@@ -688,7 +676,6 @@ export class ThreatMap {
 
     this.applyRegions();
 
-    // Refresh trajectories so stale ones disappear.
     if (this.trajEnabled) {
       this.drawTrajectories();
     }
@@ -731,7 +718,7 @@ export class ThreatMap {
     if (geojson) {
       let matched = 0;
 
-      this.geoLayer = L.geoJSON(geojson as GeoJSON.GeoJsonObject, {
+      this.geoLayer = L.geoJSON(geojson as any, {
         style: (f) => this.styleFor(matchFeature((f as any)?.properties)),
         onEachFeature: (f, layer) => {
           const key = matchFeature((f as any)?.properties);
