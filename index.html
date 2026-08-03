@@ -1,1584 +1,593 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000" />
-
-  <title>Ukraine Defender — моніторинг повітряних загроз</title>
-  <meta
-    name="description"
-    content="Система моніторингу повітряних загроз по всій Україні."
-  />
-
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <link rel="apple-touch-icon" href="/icon.svg" />
-
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="UA Defender" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-
-  <style>
-    /* ============================================================
-       NEW UI CRITICAL STYLES
-       Loader / Auth / User menu / Support / Donate / Admin
-       ============================================================ */
-
-    :root {
-      --ud-black: #000000;
-      --ud-bg: #0b1220;
-      --ud-panel: #131d33;
-      --ud-panel-2: #18243d;
-      --ud-line: #24344f;
-      --ud-text: #e8eef7;
-      --ud-muted: #8aa0c0;
-      --ud-cyan: #35c4ff;
-      --ud-green: #2ee6a6;
-      --ud-amber: #ffb020;
-      --ud-red: #ff3b3b;
-      --ud-gold: #ffd700;
-      --ud-font-display: "Unbounded", sans-serif;
-      --ud-font-mono: "JetBrains Mono", monospace;
-      --ud-font-body: "Manrope", sans-serif;
-    }
-
-    /* ===== LOADER ===== */
-
-    .loader {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
-      background: var(--ud-black);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 1;
-      transition: opacity 0.45s ease;
-    }
-
-    .loader[data-hidden="true"] {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .loader__brand {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      padding: 0 24px;
-    }
-
-    .loader__trident {
-      width: 84px;
-      height: auto;
-      display: block;
-      opacity: 0;
-      transform: scale(0.92) translateY(8px);
-      animation: udLoaderTrident 0.7s ease forwards;
-      filter: drop-shadow(0 0 18px rgba(53, 196, 255, 0.18));
-    }
-
-    .loader__text-wrap {
-      overflow: hidden;
-      display: inline-flex;
-    }
-
-    .loader__text {
-      display: inline-block;
-      font-family: var(--ud-font-display);
-      font-weight: 800;
-      font-size: 30px;
-      letter-spacing: 2px;
-      color: #ffffff;
-      white-space: nowrap;
-      transform: translateX(-110%);
-      animation: udLoaderText 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
-      text-shadow: 0 0 22px rgba(53, 196, 255, 0.18);
-    }
-
-    @keyframes udLoaderTrident {
-      to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-    }
-
-    @keyframes udLoaderText {
-      to {
-        transform: translateX(0);
-      }
-    }
-
-    /* ===== AUTH ZONE / USER MENU ===== */
-
-    .auth-zone {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .user-area {
-      position: relative;
-    }
-
-    .user-menu-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: var(--ud-font-mono);
-      font-size: 12px;
-      letter-spacing: 0.4px;
-      color: var(--ud-text);
-      background: linear-gradient(180deg, rgba(24, 36, 61, 0.95), rgba(17, 26, 46, 0.95));
-      border: 1px solid var(--ud-line);
-      border-radius: 10px;
-      padding: 9px 12px;
-      cursor: pointer;
-      transition: all 0.16s ease;
-    }
-
-    .user-menu-btn:hover,
-    .user-area[data-open="true"] .user-menu-btn {
-      border-color: var(--ud-cyan);
-      color: #ffffff;
-      box-shadow: 0 0 18px rgba(53, 196, 255, 0.18);
-    }
-
-    .user-menu-btn__arrow {
-      color: var(--ud-muted);
-      font-size: 10px;
-    }
-
-    .user-menu {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      z-index: 1300;
-      width: 230px;
-      display: none;
-      flex-direction: column;
-      gap: 6px;
-      padding: 10px;
-      background: linear-gradient(180deg, rgba(24, 36, 61, 0.98), rgba(13, 22, 38, 0.98));
-      border: 1px solid var(--ud-line);
-      border-radius: 14px;
-      box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(10px);
-    }
-
-    .user-area:hover .user-menu,
-    .user-area:focus-within .user-menu,
-    .user-area[data-open="true"] .user-menu {
-      display: flex;
-    }
-
-    .user-menu button {
-      width: 100%;
-      text-align: left;
-      font-family: var(--ud-font-body);
-      font-size: 13px;
-      color: var(--ud-text);
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 10px;
-      padding: 10px 11px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .user-menu button:hover {
-      background: rgba(53, 196, 255, 0.09);
-      border-color: rgba(53, 196, 255, 0.22);
-      color: #ffffff;
-    }
-
-    /* ===== GENERIC OVERLAYS ===== */
-
-    .auth-overlay,
-    .support-overlay,
-    .donate-overlay,
-    .admin-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 2600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-
-    .auth-overlay[data-open="true"],
-    .support-overlay[data-open="true"],
-    .donate-overlay[data-open="true"],
-    .admin-overlay[data-open="true"] {
-      pointer-events: auto;
-      opacity: 1;
-    }
-
-    .auth-backdrop,
-    .support-backdrop,
-    .donate-backdrop,
-    .admin-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(4, 8, 16, 0.78);
-      backdrop-filter: blur(8px);
-    }
-
-    .auth,
-    .support,
-    .donate,
-    .admin {
-      position: relative;
-      z-index: 1;
-      width: min(560px, 100%);
-      max-height: 90vh;
-      overflow-y: auto;
-      background:
-        radial-gradient(120% 60% at 0% 0%, rgba(53, 196, 255, 0.08), transparent 55%),
-        linear-gradient(180deg, #131d33, #0d1626);
-      border: 1px solid var(--ud-line);
-      border-top: 3px solid var(--ud-cyan);
-      border-radius: 18px;
-      box-shadow:
-        0 30px 80px rgba(0, 0, 0, 0.62),
-        0 0 40px rgba(53, 196, 255, 0.1);
-      padding: 22px;
-      transform: translateY(16px) scale(0.985);
-      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    .auth-overlay[data-open="true"] .auth,
-    .support-overlay[data-open="true"] .support,
-    .donate-overlay[data-open="true"] .donate,
-    .admin-overlay[data-open="true"] .admin {
-      transform: translateY(0) scale(1);
-    }
-
-    .admin {
-      width: min(1120px, 100%);
-      border-top-color: var(--ud-gold);
-      box-shadow:
-        0 30px 80px rgba(0, 0, 0, 0.62),
-        0 0 40px rgba(255, 215, 0, 0.08);
-    }
-
-    .auth__close,
-    .support__close,
-    .donate__close,
-    .admin__close {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: transparent;
-      border: none;
-      color: var(--ud-muted);
-      font-size: 18px;
-      cursor: pointer;
-      transition: color 0.15s ease, transform 0.15s ease;
-    }
-
-    .auth__close:hover,
-    .support__close:hover,
-    .donate__close:hover,
-    .admin__close:hover {
-      color: var(--ud-text);
-      transform: rotate(90deg);
-    }
-
-    .ud-title {
-      font-family: var(--ud-font-display);
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-      margin: 0 0 8px;
-    }
-
-    .ud-sub {
-      font-family: var(--ud-font-mono);
-      font-size: 11px;
-      color: var(--ud-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin: 0 0 18px;
-    }
-
-    /* ===== FORMS ===== */
-
-    .ud-field {
-      margin-bottom: 12px;
-    }
-
-    .ud-label {
-      display: block;
-      font-family: var(--ud-font-mono);
-      font-size: 10px;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: var(--ud-muted);
-      margin-bottom: 6px;
-    }
-
-    .ud-input,
-    .ud-select,
-    .ud-textarea {
-      width: 100%;
-      border: 1px solid var(--ud-line);
-      background: rgba(9, 15, 29, 0.9);
-      color: var(--ud-text);
-      border-radius: 12px;
-      padding: 12px 13px;
-      outline: none;
-      font-family: var(--ud-font-body);
-      font-size: 14px;
-      transition: border-color 0.16s ease, box-shadow 0.16s ease;
-    }
-
-    .ud-textarea {
-      min-height: 110px;
-      resize: vertical;
-    }
-
-    .ud-input:focus,
-    .ud-select:focus,
-    .ud-textarea:focus {
-      border-color: var(--ud-cyan);
-      box-shadow: 0 0 0 3px rgba(53, 196, 255, 0.12);
-    }
-
-    .ud-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: 1px solid rgba(53, 196, 255, 0.35);
-      background: linear-gradient(90deg, rgba(53, 196, 255, 0.22), rgba(46, 230, 166, 0.14));
-      color: #ffffff;
-      font-family: var(--ud-font-mono);
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      border-radius: 12px;
-      padding: 12px 16px;
-      cursor: pointer;
-      transition: all 0.16s ease;
-      text-decoration: none;
-    }
-
-    .ud-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 26px rgba(53, 196, 255, 0.18);
-      color: #ffffff;
-    }
-
-    .ud-btn--block {
-      width: 100%;
-    }
-
-    .ud-btn--ghost {
-      background: transparent;
-      color: var(--ud-muted);
-      border-color: var(--ud-line);
-    }
-
-    .ud-btn--ghost:hover {
-      color: var(--ud-text);
-      border-color: var(--ud-cyan);
-      box-shadow: none;
-    }
-
-    .ud-row {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .ud-row--between {
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ud-linklike {
-      background: transparent;
-      border: none;
-      padding: 0;
-      color: var(--ud-cyan);
-      cursor: pointer;
-      font-size: 13px;
-      font-family: var(--ud-font-body);
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    .ud-message {
-      margin-top: 12px;
-      border-radius: 12px;
-      padding: 11px 12px;
-      font-size: 13px;
-      line-height: 1.45;
-      border: 1px solid transparent;
-    }
-
-    .ud-message--error {
-      color: #ffb3b3;
-      background: rgba(255, 59, 59, 0.09);
-      border-color: rgba(255, 59, 59, 0.26);
-    }
-
-    .ud-message--ok {
-      color: #b8ffe9;
-      background: rgba(46, 230, 166, 0.09);
-      border-color: rgba(46, 230, 166, 0.26);
-    }
-
-    /* ===== AUTH ===== */
-
-    .auth-step[hidden] {
-      display: none !important;
-    }
-
-    .auth-view[hidden] {
-      display: none !important;
-    }
-
-    .auth__hint {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--ud-muted);
-      line-height: 1.5;
-    }
-
-    /* ===== SUPPORT ===== */
-
-    .support__list,
-    .admin__list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .support-ticket,
-    .admin-row {
-      background: var(--ud-panel-2);
-      border: 1px solid var(--ud-line);
-      border-radius: 14px;
-      padding: 13px;
-      cursor: pointer;
-      transition: border-color 0.16s ease, transform 0.16s ease;
-    }
-
-    .support-ticket:hover,
-    .admin-row:hover {
-      border-color: rgba(53, 196, 255, 0.4);
-      transform: translateY(-1px);
-    }
-
-    .support-ticket__top,
-    .admin-row__top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .support-ticket__title,
-    .admin-row__title {
-      font-weight: 700;
-      color: var(--ud-text);
-      font-size: 14px;
-    }
-
-    .support-ticket__meta,
-    .admin-row__meta {
-      margin-top: 7px;
-      color: var(--ud-muted);
-      font-size: 12px;
-      font-family: var(--ud-font-mono);
-      line-height: 1.45;
-    }
-
-    .ud-badge {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 5px 9px;
-      font-family: var(--ud-font-mono);
-      font-size: 10px;
-      letter-spacing: 0.4px;
-      border: 1px solid var(--ud-line);
-      color: var(--ud-muted);
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .ud-badge--open {
-      color: var(--ud-amber);
-      border-color: rgba(255, 176, 32, 0.35);
-      background: rgba(255, 176, 32, 0.08);
-    }
-
-    .ud-badge--answered {
-      color: var(--ud-cyan);
-      border-color: rgba(53, 196, 255, 0.35);
-      background: rgba(53, 196, 255, 0.08);
-    }
-
-    .ud-badge--closed {
-      color: var(--ud-muted);
-    }
-
-    .support-messages {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin: 14px 0;
-      max-height: 38vh;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .support-message {
-      border: 1px solid var(--ud-line);
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: 14px;
-      padding: 12px;
-    }
-
-    .support-message--admin {
-      border-color: rgba(53, 196, 255, 0.32);
-      background: rgba(53, 196, 255, 0.07);
-    }
-
-    .support-message__head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
-      color: var(--ud-muted);
-      font-family: var(--ud-font-mono);
-      font-size: 11px;
-    }
-
-    .support-message__body {
-      color: var(--ud-text);
-      font-size: 14px;
-      line-height: 1.5;
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-
-    /* ===== DONATE ===== */
-
-    .donate__url {
-      margin-top: 12px;
-      font-family: var(--ud-font-mono);
-      font-size: 12px;
-      color: var(--ud-muted);
-      word-break: break-all;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px dashed var(--ud-line);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-
-    /* ===== ADMIN ===== */
-
-    .admin__tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 14px 0;
-    }
-
-    .admin__tab {
-      border: 1px solid var(--ud-line);
-      background: var(--ud-panel-2);
-      color: var(--ud-muted);
-      border-radius: 999px;
-      padding: 9px 13px;
-      font-family: var(--ud-font-mono);
-      font-size: 11px;
-      letter-spacing: 0.4px;
-      cursor: pointer;
-      transition: all 0.16s ease;
-    }
-
-    .admin__tab:hover,
-    .admin__tab--on {
-      color: #ffffff;
-      border-color: var(--ud-gold);
-      box-shadow: 0 0 18px rgba(255, 215, 0, 0.12);
-      background: rgba(255, 215, 0, 0.08);
-    }
-
-    .admin__pane[hidden] {
-      display: none !important;
-    }
-
-    .admin__toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .admin__toolbar .ud-select {
-      width: auto;
-      min-width: 160px;
-    }
-
-    .admin__stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .admin__stat {
-      background: var(--ud-panel-2);
-      border: 1px solid var(--ud-line);
-      border-radius: 14px;
-      padding: 13px;
-      text-align: center;
-    }
-
-    .admin__stat b {
-      display: block;
-      font-family: var(--ud-font-mono);
-      font-size: 28px;
-      color: #ffffff;
-      line-height: 1;
-    }
-
-    .admin__stat span {
-      display: block;
-      margin-top: 7px;
-      font-family: var(--ud-font-mono);
-      font-size: 9.5px;
-      color: var(--ud-muted);
-      letter-spacing: 0.4px;
-      line-height: 1.35;
-    }
-
-    .admin__empty {
-      color: var(--ud-muted);
-      font-size: 13px;
-      line-height: 1.5;
-      padding: 12px 2px;
-    }
-
-    /* ===== MOBILE ===== */
-
-    @media (max-width: 768px) {
-      .auth-overlay,
-      .support-overlay,
-      .donate-overlay,
-      .admin-overlay {
-        padding: 12px;
-        align-items: flex-end;
-      }
-
-      .auth,
-      .support,
-      .donate,
-      .admin {
-        width: 100%;
-        max-height: 92vh;
-        border-radius: 18px 18px 14px 14px;
-        padding: 18px 16px;
-      }
-
-      .loader__brand {
-        flex-direction: column;
-        gap: 14px;
-      }
-
-      .loader__trident {
-        width: 68px;
-      }
-
-      .loader__text {
-        font-size: 22px;
-        letter-spacing: 1.5px;
-      }
-
-      .auth-zone {
-        margin-left: 0;
-      }
-
-      .admin__stats {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 380px) {
-      .loader__text {
-        font-size: 19px;
-      }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1220" />
+<title>Ukraine Defender — Моніторинг повітряних загроз</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+:root {
+  --bg-0: #0b1220;
+  --bg-1: #111a2e;
+  --panel: #131d33;
+  --panel-2: #18243d;
+  --line: #24344f;
+  --text: #e8eef7;
+  --muted: #8aa0c0;
+  --red: #ff3b3b;
+  --green: #2ee6a6;
+  --amber: #ffb020;
+  --cyan: #35c4ff;
+  --gold: #ffd700;
+  --font-display: "Unbounded", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-body: "Manrope", sans-serif;
+  --header-h: 76px;
+  --tabbar-h: 0px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 70% -10%, rgba(53,196,255,0.06), transparent 60%),
+    radial-gradient(900px 600px at 10% 110%, rgba(255,59,59,0.05), transparent 60%),
+    var(--bg-0);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== LOADER ===== */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-0);
+  transition: opacity 0.5s ease;
+}
+.loader[data-hidden="true"] { opacity: 0; pointer-events: none; }
+.loader__brand { display: flex; align-items: center; gap: 20px; }
+.loader__trident { width: 82px; filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); animation: tridentPulse 2.4s ease-in-out infinite; }
+@keyframes tridentPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.loader__text-wrap { display: flex; flex-direction: column; gap: 4px; }
+.loader__text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #35c4ff, #ffd700);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.loader__sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+}
+
+/* ===== TOPBAR ===== */
+.topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding-top: var(--safe-t); }
+.topbar__row {
+  display: flex; align-items: center; gap: 20px;
+  padding: 10px 20px;
+  background: linear-gradient(180deg, var(--bg-1), rgba(17,26,46,0.92));
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand__shield { display: inline-flex; align-items: center; line-height: 0; }
+.brand__shield img { width: 24px; height: 29px; display: block; animation: shieldGlow 3.4s ease-in-out infinite; }
+@keyframes shieldGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(53,196,255,0.30)); }
+  50% { filter: drop-shadow(0 0 9px rgba(53,196,255,0.62)); }
+}
+.brand__name {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 17px; letter-spacing: 1.5px;
+  background: linear-gradient(90deg, #35c4ff, #ffd700);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.topbar__meta { display: flex; align-items: baseline; gap: 6px; margin-left: auto; }
+.clock { font-family: var(--font-mono); font-size: 18px; font-weight: 600; letter-spacing: 1px; }
+.clock__tz { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+.topbar__nav { display: flex; gap: 8px; }
+.nav-btn {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.5px;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; transition: all 0.15s;
+}
+.nav-btn:hover { color: var(--text); border-color: var(--cyan); box-shadow: 0 0 12px rgba(53,196,255,0.15); }
+.nav-btn--accent { color: var(--cyan); border-color: rgba(53,196,255,0.45); }
+.nav-btn--accent:hover { background: rgba(53,196,255,0.12); color: #fff; }
+
+.auth-zone { display: flex; align-items: center; gap: 10px; margin-left: 16px; }
+.user-area { position: relative; }
+.user-menu-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--cyan); background: rgba(53,196,255,0.08);
+  border: 1px solid rgba(53,196,255,0.4); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer;
+}
+.user-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  min-width: 180px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  padding: 6px; display: none; z-index: 100;
+}
+.user-area[data-open="true"] .user-menu { display: block; }
+.user-menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; font-family: var(--font-mono);
+  font-size: 11px; color: var(--text);
+  background: transparent; border: none; border-radius: 4px;
+  cursor: pointer;
+}
+.user-menu button:hover { background: var(--panel-2); color: var(--cyan); }
+
+.status-strip {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 20px; font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 0.5px; transition: background 0.6s, color 0.6s;
+}
+.status-strip[data-state="calm"] { background: linear-gradient(90deg, rgba(46,230,166,0.16), rgba(46,230,166,0.03)); color: var(--green); }
+.status-strip[data-state="alert"] { background: linear-gradient(90deg, rgba(255,59,59,0.24), rgba(255,59,59,0.04)); color: var(--red); }
+.status-strip__dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.status-strip[data-state="alert"] .status-strip__dot { animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+/* ===== MAP ===== */
+.map { position: fixed; inset: 0; top: 0; background: var(--bg-0); }
+.leaflet-container { background: var(--bg-0); }
+.leaflet-popup-content-wrapper {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.leaflet-popup-tip { background: var(--panel); }
+
+/* 🔥 НОВОЕ: ПУЛЬСАЦИЯ РЕГИОНОВ ПРИ ТРИВОГЕ */
+@keyframes regionPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.event-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ===== DRAWER ===== */
+.drawer {
+  position: fixed; top: var(--header-h); right: 0; bottom: var(--tabbar-h); width: 400px; max-width: 92vw;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  box-shadow: -24px 0 60px rgba(0,0,0,0.55);
+  transform: translateX(105%); transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 900; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.drawer::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(53,196,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53,196,255,0.035) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+}
+.drawer[data-open="true"] { transform: translateX(0); }
+.drawer__head {
+  position: relative; z-index: 1;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 18px 20px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-2), transparent);
+}
+.drawer__title { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+.drawer__status { display: inline-block; margin-top: 7px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 1px; }
+.drawer__status--alert { color: var(--red); }
+.drawer__status--calm { color: var(--green); }
+.drawer__close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; transition: color 0.15s, transform 0.15s; }
+.drawer__close:hover { color: var(--text); transform: rotate(90deg); }
+.drawer__body { position: relative; z-index: 1; padding: 16px 18px 24px; overflow-y: auto; flex: 1; }
+
+.drawer__empty { color: var(--muted); font-size: 13px; padding: 20px 4px; }
+
+.ev-status { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-family: var(--font-mono); border: 1px solid var(--line); }
+.ev-status--alert { background: rgba(255,59,59,0.08); border-color: rgba(255,59,59,0.4); color: var(--red); }
+.ev-status--calm { background: rgba(46,230,166,0.07); border-color: rgba(46,230,166,0.35); color: var(--green); }
+.ev-status__dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.ev-status--alert .ev-status__dot { animation: blink 1s infinite; }
+.ev-status__label { font-size: 12px; letter-spacing: 0.5px; }
+.ev-status__timer { margin-left: auto; font-size: 20px; font-weight: 600; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.3px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; transition: all 0.15s; }
+.chip--on { color: #06121f; background: var(--cyan); border-color: var(--cyan); font-weight: 600; }
+
+.ev-list { display: flex; flex-direction: column; gap: 10px; }
+.ev-empty { color: var(--muted); font-size: 13px; line-height: 1.6; padding: 14px 4px; }
+
+.ev-row { position: relative; display: block; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 12px 16px; cursor: pointer; overflow: hidden; transition: border-color 0.15s, transform 0.12s; }
+.ev-row__bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.ev-row__top { display: flex; align-items: center; gap: 8px; }
+.ev-row__icon { font-size: 15px; }
+.ev-row__type { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+.ev-row__time { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.ev-row__dir { margin-top: 5px; font-size: 13px; color: var(--text); }
+.ev-row__dir b { color: #fff; font-weight: 700; }
+.ev-row__foot { margin-top: 9px; display: flex; align-items: center; gap: 10px; }
+
+.consensus { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+.consensus__bar { width: 46px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.consensus__fill { display: block; height: 100%; border-radius: 4px; transition: width 0.5s; }
+.consensus--low .consensus__fill { background: var(--amber); }
+.consensus--mid .consensus__fill { background: var(--cyan); }
+.consensus--high .consensus__fill { background: var(--green); }
+
+/* ===== OVERLAYS ===== */
+.report-overlay,
+.about-overlay,
+.auth-overlay,
+.support-overlay,
+.donate-overlay,
+.admin-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+}
+.report-overlay[data-open="true"],
+.about-overlay[data-open="true"],
+.auth-overlay[data-open="true"],
+.support-overlay[data-open="true"],
+.donate-overlay[data-open="true"],
+.admin-overlay[data-open="true"] {
+  pointer-events: auto; opacity: 1;
+}
+.report-overlay__backdrop,
+.about-overlay__backdrop,
+.auth-backdrop,
+.support-backdrop,
+.donate-backdrop,
+.admin-backdrop {
+  position: absolute; inset: 0; background: rgba(5,9,18,0.78); backdrop-filter: blur(8px);
+}
+
+.report, .about, .auth, .support, .donate, .admin {
+  position: relative; z-index: 1;
+  width: min(620px, 100%); max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(180deg, #131d33, #0d1626);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  padding: 22px 24px 20px;
+  transform: translateY(14px) scale(0.98);
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.report-overlay[data-open="true"] .report,
+.about-overlay[data-open="true"] .about,
+.auth-overlay[data-open="true"] .auth,
+.support-overlay[data-open="true"] .support,
+.donate-overlay[data-open="true"] .donate,
+.admin-overlay[data-open="true"] .admin { transform: translateY(0) scale(1); }
+
+.ud-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+.ud-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; }
+.ud-field { margin-top: 14px; }
+.ud-label { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing: 0.3px; margin-bottom: 6px; }
+.ud-input, .ud-textarea, .ud-select {
+  width: 100%; padding: 10px 12px;
+  font-family: var(--font-body); font-size: 14px;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px;
+  outline: none; transition: border-color 0.15s;
+}
+.ud-input:focus, .ud-textarea:focus, .ud-select:focus { border-color: var(--cyan); }
+.ud-textarea { min-height: 90px; resize: vertical; }
+.ud-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 18px; font-family: var(--font-mono); font-size: 12px;
+  font-weight: 600; letter-spacing: 0.5px;
+  color: #06121f; background: var(--cyan);
+  border: none; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.ud-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(53,196,255,0.35); }
+.ud-btn--block { width: 100%; }
+.ud-btn--ghost { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+.ud-row { display: flex; gap: 10px; margin-top: 12px; }
+.ud-row--between { justify-content: space-between; }
+.ud-linklike { background: none; border: none; color: var(--cyan); font-family: var(--font-mono); font-size: 11px; cursor: pointer; padding: 4px 8px; }
+.ud-message { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--line); }
+
+/* ===== REPORT ===== */
+.report { border-top: 3px solid var(--cyan); }
+.rp-head { display: flex; align-items: center; justify-content: space-between; }
+.rp-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+.rp-close:hover { color: var(--text); }
+.rp-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+.rp-counter { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 8px; text-align: center; }
+.rp-counter__n { display: block; font-family: var(--font-mono); font-size: 26px; font-weight: 600; color: #fff; }
+.rp-counter__l { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.3px; }
+
+/* ===== ABOUT ===== */
+.about { border-top: 3px solid var(--gold); }
+.about__lead { margin-top: 16px; font-size: 14px; line-height: 1.65; color: #cdd9ec; }
+.about__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+.about__card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.about__card-ico { font-size: 20px; }
+.about__card-t { margin-top: 8px; font-family: var(--font-display); font-size: 12.5px; font-weight: 600; }
+.about__card-d { margin-top: 5px; font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+.about__disclaimer { display: flex; gap: 10px; margin-top: 20px; padding: 13px 14px; border-radius: 11px; background: rgba(255,176,32,0.07); border: 1px solid rgba(255,176,32,0.35); font-size: 11.5px; line-height: 1.55; color: #d8c39a; }
+
+/* ===== TABBAR ===== */
+.tabbar { display: none; }
+
+/* ===== TOAST ===== */
+.toast-host { position: fixed; left: 50%; bottom: calc(20px + var(--tabbar-h) + var(--safe-b)); transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.toast { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-radius: 11px; background: linear-gradient(180deg, rgba(24,36,61,0.97), rgba(17,26,46,0.97)); border: 1px solid var(--line); border-left: 3px solid var(--cyan); box-shadow: 0 12px 34px rgba(0,0,0,0.5); font-family: var(--font-mono); font-size: 12px; color: var(--text); animation: toastIn 0.3s cubic-bezier(0.22,1,0.36,1) both; pointer-events: auto; }
+.toast--warn { border-left-color: var(--amber); }
+.toast--ok { border-left-color: var(--green); }
+.toast--out { animation: toastOut 0.3s ease-in forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(10px) scale(0.96); } }
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+  :root { --header-h: 64px; --tabbar-h: calc(58px + var(--safe-b)); }
+  .topbar__row { padding: 8px 14px; gap: 12px; }
+  .brand__name { font-size: 14px; letter-spacing: 1px; }
+  .clock { font-size: 16px; }
+  .topbar__nav { display: none; }
+  .status-strip { padding: 7px 14px; font-size: 11px; gap: 9px; }
+  .map { bottom: 0; }
+  .drawer {
+    top: auto; left: 0; right: 0; bottom: 0;
+    width: 100%; max-width: 100%; height: 78vh; max-height: 88vh;
+    border-left: none; border-top: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(105%);
+  }
+  .drawer[data-open="true"] { transform: translateY(0); }
+  .tabbar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1100;
+    background: linear-gradient(0deg, var(--bg-1), rgba(17,26,46,0.96));
+    border-top: 1px solid var(--line);
+    padding-bottom: var(--safe-b);
+    backdrop-filter: blur(10px);
+  }
+  .tabbar__btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    height: 58px; background: none; border: none; cursor: pointer; color: var(--muted);
+  }
+  .tabbar__ico { font-size: 19px; }
+  .tabbar__lbl { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.3px; }
+  .toast-host { bottom: calc(70px + var(--safe-b)); }
+  .rp-counters { grid-template-columns: repeat(2, 1fr); }
+  .about__grid { grid-template-columns: 1fr; }
+}
+
+/* ===== LOADER ERROR STATE ===== */
+.loader[data-state="error"] .loader__brand { display: none; }
+.loader__error {
+  text-align: center;
+  padding: 40px;
+  display: none;
+}
+.loader[data-state="error"] .loader__error { display: block; }
+.loader__error h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin: 16px 0 8px;
+  color: var(--amber);
+}
+.loader__error p {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-bottom: 20px;
+}
+.loader__error button {
+  padding: 12px 24px;
+  background: var(--cyan);
+  color: #06121f;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.loader__error button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(53,196,255,0.35);
+}
+</style>
 </head>
-
 <body>
-  <!-- ============================================================
-       LOADER
-       ============================================================ -->
-  <div id="loader" class="loader" aria-hidden="true">
-    <div class="loader__brand">
-      <img
-        src="/logo.svg"
-        alt="Трезубець"
-        class="loader__trident"
-      />
-      <span class="loader__text-wrap">
-        <span class="loader__text">Ukraine Defender</span>
-      </span>
-    </div>
+
+<div id="loader" class="loader" aria-hidden="true">
+  <div class="loader__brand">
+    <img src="/logo.svg" alt="Трезубець" class="loader__trident" />
+    <span class="loader__text-wrap">
+      <span class="loader__text">Ukraine Defender</span>
+      <span class="loader__sub">ЗАВАНТАЖЕННЯ...</span>
+    </span>
   </div>
-
-  <!-- ============================================================
-       TOPBAR
-       ============================================================ -->
-  <header class="topbar">
-    <div class="topbar__row">
-      <div class="brand">
-        <span class="brand__shield" aria-hidden="true">
-          <img
-            src="/logo.svg"
-            alt=""
-            style="width: 24px; height: 29px; display: block;"
-          />
-        </span>
-        <span class="brand__name">UKRAINE DEFENDER</span>
-      </div>
-
-      <div class="topbar__meta">
-        <span class="clock" id="clock">--:--:--</span>
-        <span class="clock__tz">KYIV</span>
-      </div>
-
-      <nav class="topbar__nav">
-        <button class="nav-btn nav-btn--accent" data-nav="report">
-          📊 Звіт
-        </button>
-        <button class="nav-btn" data-nav="about">
-          Про нас
-        </button>
-        <button class="nav-btn" data-nav="donate">
-          Донат
-        </button>
-        <button class="nav-btn" data-nav="support">
-          Підтримка
-        </button>
-      </nav>
-
-      <div class="auth-zone">
-        <button id="loginOpenBtn" class="nav-btn nav-btn--accent">
-          Увійти
-        </button>
-
-        <div class="user-area" id="userArea" hidden>
-          <button class="user-menu-btn" id="userMenuBtn">
-            <span class="user-menu-btn__name" id="userNickname">user</span>
-            <span class="user-menu-btn__arrow">▾</span>
-          </button>
-
-          <div class="user-menu" id="userMenu">
-            <button data-user-action="theme">🎨 Змінити тему</button>
-            <button data-user-action="lang">🌐 Укр / Eng</button>
-            <button data-user-action="support">🛠 Техпідтримка</button>
-            <button data-user-action="donate">💛 Підтримати</button>
-            <button data-user-action="admin" id="adminPanelBtn" hidden>
-              🧠 Адмін-панель
-            </button>
-            <button data-user-action="logout">🚪 Вийти</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="status-strip" id="statusStrip" data-state="calm">
-      <span class="status-strip__dot"></span>
-      <span class="status-strip__text" id="statusText">
-        УСЕ ЧИСТО · ТРИМАЙМОСЬ
-      </span>
-    </div>
-  </header>
-
-  <!-- ============================================================
-       MAP
-       ============================================================ -->
-  <main id="map" class="map"></main>
-
-  <!-- ============================================================
-       DRAWER
-       ============================================================ -->
-  <aside class="drawer" id="drawer" data-open="false">
-    <div class="drawer__head">
-      <span class="drawer__grab" aria-hidden="true"></span>
-
-      <div>
-        <h2 class="drawer__title" id="drawerTitle">Київська область</h2>
-        <span class="drawer__status" id="drawerStatus">—</span>
-      </div>
-
-      <button class="drawer__close" id="drawerClose">✕</button>
-    </div>
-
-    <div class="drawer__body" id="drawerBody">
-      <p class="drawer__empty">Оберіть область на карті</p>
-    </div>
-  </aside>
-
-  <!-- ============================================================
-       TABBAR
-       ============================================================ -->
-  <nav class="tabbar" aria-label="Нижня навігація">
-    <button class="tabbar__btn" data-nav="report">
-      <span class="tabbar__ico">📊</span>
-      <span class="tabbar__lbl">Звіт</span>
-    </button>
-
-    <button class="tabbar__btn" data-nav="about">
-      <span class="tabbar__ico">ℹ️</span>
-      <span class="tabbar__lbl">Про нас</span>
-    </button>
-
-    <button class="tabbar__btn" data-nav="donate">
-      <span class="tabbar__ico">💛</span>
-      <span class="tabbar__lbl">Донат</span>
-    </button>
-
-    <button class="tabbar__btn" data-nav="support">
-      <span class="tabbar__ico">🛠</span>
-      <span class="tabbar__lbl">Підтримка</span>
-    </button>
-  </nav>
-
-  <!-- ============================================================
-       REPORT OVERLAY
-       ============================================================ -->
-  <div class="report-overlay" id="reportOverlay" data-open="false">
-    <div class="report-overlay__backdrop"></div>
-    <div class="report" id="reportCard"></div>
+  <div class="loader__error">
+    <div style="font-size: 48px;">⚠️</div>
+    <h2>Повільне з'єднання</h2>
+    <p>Не вдалося завантажити дані. Перевірте інтернет.</p>
+    <button onclick="location.reload()">🔄 Спробувати ще раз</button>
   </div>
+</div>
 
-  <!-- ============================================================
-       ABOUT OVERLAY
-       ============================================================ -->
-  <div class="about-overlay" id="aboutOverlay" data-open="false">
-    <div class="about-overlay__backdrop" data-nav-close="about"></div>
-
-    <div class="about" role="dialog" aria-label="Про Ukraine Defender">
-      <div class="about__head">
-        <div class="about__brand">
-          <span class="about__shield" aria-hidden="true">
-            <img
-              src="/logo.svg"
-              alt=""
-              style="width: 22px; height: 26px; display: block;"
-            />
-          </span>
-          <span class="about__name">UKRAINE DEFENDER</span>
+<header class="topbar">
+  <div class="topbar__row">
+    <div class="brand">
+      <span class="brand__shield"><img src="/logo.svg" alt="" /></span>
+      <span class="brand__name">UKRAINE DEFENDER</span>
+    </div>
+    <div class="topbar__meta">
+      <span class="clock" id="clock">--:--:--</span>
+      <span class="clock__tz">KYIV</span>
+    </div>
+    <nav class="topbar__nav">
+      <button class="nav-btn nav-btn--accent" data-nav="report">📊 Звіт</button>
+      <button class="nav-btn" data-nav="about">Про нас</button>
+      <button class="nav-btn" data-nav="donate">Донат</button>
+    </nav>
+    <div class="auth-zone">
+      <button id="loginOpenBtn" class="nav-btn nav-btn--accent">Увійти</button>
+      <div class="user-area" id="userArea" hidden data-open="false">
+        <button class="user-menu-btn" id="userMenuBtn">
+          <span id="userNickname">user</span>
+          <span>▾</span>
+        </button>
+        <div class="user-menu">
+          <button data-user-action="theme">🎨 Змінити тему</button>
+          <button data-user-action="logout">🚪 Вийти</button>
         </div>
-
-        <button class="about__close" data-nav-close="about">✕</button>
-      </div>
-
-      <p class="about__lead">
-        Ukraine Defender — цивільний моніторинг повітряних загроз по всій Україні.
-        Ми збираємо сигнали з відкритих каналів, звіряємо їх між собою та показуємо
-        єдину картину в реальному часі.
-      </p>
-
-      <div class="about__grid">
-        <div class="about__card">
-          <div class="about__card-ico">🛰️</div>
-          <div class="about__card-t">Агрегація каналів</div>
-          <div class="about__card-d">
-            Універсальні та регіональні канали в одному потоці.
-          </div>
-        </div>
-
-        <div class="about__card">
-          <div class="about__card-ico">🤝</div>
-          <div class="about__card-t">Consensus</div>
-          <div class="about__card-d">
-            Подія вагома, коли її підтверджують незалежні джерела.
-          </div>
-        </div>
-
-        <div class="about__card">
-          <div class="about__card-ico">🧠</div>
-          <div class="about__card-t">Regex + AI</div>
-          <div class="about__card-d">
-            Швидкий шар правил та нейромережа для складних повідомлень.
-          </div>
-        </div>
-
-        <div class="about__card">
-          <div class="about__card-ico">🗄️</div>
-          <div class="about__card-t">Пам'ять</div>
-          <div class="about__card-d">
-            Події пишуться в базу для звітів та майбутнього датасету.
-          </div>
-        </div>
-      </div>
-
-      <div class="about__block">
-        <div class="about__block-t">Підтримати проєкт</div>
-        <div class="about__block-c">
-          <button class="ud-btn" data-nav="donate">
-            💛 Відкрити банку
-          </button>
-        </div>
-      </div>
-
-      <div class="about__block">
-        <div class="about__block-t">Джерела сигналу</div>
-        <ul class="about__src">
-          <li>
-            <span class="about__src-tag about__src-tag--g">універсал</span>
-            @aerisrimor · @war_monitor · @monitor_ukr · @vanek_nikolaev · @kpszsu · @eRadarrua · @povitryanatrivogaaa
-          </li>
-
-          <li>
-            <span class="about__src-tag about__src-tag--r">київ</span>
-            @varta_raketa · @nebo_raketa · @kievreal1
-          </li>
-
-          <li>
-            <span class="about__src-tag about__src-tag--v">верифікатор</span>
-            @pechersk_info_official
-          </li>
-        </ul>
-      </div>
-
-      <div class="about__disclaimer">
-        <span class="about__disclaimer-ico">⚠️</span>
-        <span>
-          Це цивільний агрегатор відкритих даних, а не офіційна система сповіщення.
-          Він не замінює повітряну тривогу та офіційні канали. Рішення приймайте
-          за сукупністю джерел.
-        </span>
       </div>
     </div>
   </div>
+  <div class="status-strip" id="statusStrip" data-state="calm">
+    <span class="status-strip__dot"></span>
+    <span class="status-strip__text" id="statusText">ЗАВАНТАЖЕННЯ ДАНИХ...</span>
+  </div>
+</header>
 
-  <!-- ============================================================
-       AUTH OVERLAY
-       ============================================================ -->
-  <div class="auth-overlay" id="authOverlay" data-open="false">
-    <div class="auth-backdrop" data-auth-close></div>
+<main id="map" class="map"></main>
 
-    <div class="auth" role="dialog" aria-label="Акаунт">
-      <button class="auth__close" data-auth-close>✕</button>
+<aside class="drawer" id="drawer" data-open="false">
+  <div class="drawer__head">
+    <div>
+      <h2 class="drawer__title" id="drawerTitle">Київська область</h2>
+      <span class="drawer__status" id="drawerStatus">—</span>
+    </div>
+    <button class="drawer__close" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer__body" id="drawerBody">
+    <p class="drawer__empty">Оберіть область на карті</p>
+  </div>
+</aside>
 
-      <!-- LOGIN -->
-      <div class="auth-view" data-auth-view="login">
-        <h2 class="ud-title">Вхід</h2>
-        <p class="ud-sub">Email або нік + пароль</p>
+<nav class="tabbar">
+  <button class="tabbar__btn" data-nav="report">
+    <span class="tabbar__ico">📊</span>
+    <span class="tabbar__lbl">Звіт</span>
+  </button>
+  <button class="tabbar__btn" data-nav="about">
+    <span class="tabbar__ico">ℹ️</span>
+    <span class="tabbar__lbl">Про нас</span>
+  </button>
+  <button class="tabbar__btn" data-nav="donate">
+    <span class="tabbar__ico">💛</span>
+    <span class="tabbar__lbl">Донат</span>
+  </button>
+</nav>
 
-        <form id="loginForm">
-          <div class="ud-field">
-            <label class="ud-label" for="loginIdentifier">Email або нік</label>
-            <input
-              id="loginIdentifier"
-              class="ud-input"
-              type="text"
-              autocomplete="username"
-              placeholder="email або nickname"
-              required
-            />
-          </div>
+<div class="report-overlay" id="reportOverlay" data-open="false">
+  <div class="report-overlay__backdrop" data-nav-close="report"></div>
+  <div class="report" id="reportCard"></div>
+</div>
 
-          <div class="ud-field">
-            <label class="ud-label" for="loginPassword">Пароль</label>
-            <input
-              id="loginPassword"
-              class="ud-input"
-              type="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <button class="ud-btn ud-btn--block" type="submit">
-            Увійти
-          </button>
-
-          <div class="ud-row ud-row--between">
-            <button class="ud-linklike" type="button" data-auth-switch="forgot">
-              Забули пароль?
-            </button>
-
-            <button class="ud-linklike" type="button" data-auth-switch="register">
-              Немає акаунта? Зареєструватися
-            </button>
-          </div>
-
-          <div id="loginMessage" class="ud-message" hidden></div>
-        </form>
+<div class="about-overlay" id="aboutOverlay" data-open="false">
+  <div class="about-overlay__backdrop" data-nav-close="about"></div>
+  <div class="about">
+    <div class="rp-head">
+      <span class="ud-title">Про Ukraine Defender</span>
+      <button class="rp-close" data-nav-close="about">✕</button>
+    </div>
+    <p class="about__lead">
+      Ukraine Defender — цивільний моніторинг повітряних загроз по всій Україні.
+      Ми збираємо сигнали з відкритих каналів, звіряємо їх між собою та показуємо
+      єдину картину в реальному часі.
+    </p>
+    <div class="about__grid">
+      <div class="about__card">
+        <div class="about__card-ico">🛰️</div>
+        <div class="about__card-t">Агрегація каналів</div>
+        <div class="about__card-d">Універсальні та регіональні канали в одному потоці.</div>
       </div>
-
-      <!-- REGISTER -->
-      <div class="auth-view" data-auth-view="register" hidden>
-        <h2 class="ud-title">Реєстрація</h2>
-        <p class="ud-sub">Створення акаунта</p>
-
-        <form id="registerForm" data-step="1">
-          <div class="auth-step" data-register-step="1">
-            <div class="ud-field">
-              <label class="ud-label" for="registerNickname">Нік</label>
-              <input
-                id="registerNickname"
-                class="ud-input"
-                type="text"
-                autocomplete="username"
-                placeholder="nickname"
-                minlength="3"
-                maxlength="24"
-                required
-              />
-            </div>
-
-            <button class="ud-btn ud-btn--block" type="button" data-register-next>
-              Далі
-            </button>
-
-            <p class="auth__hint">
-              Нік відображатиметься в меню та в техпідтримці.
-            </p>
-          </div>
-
-          <div class="auth-step" data-register-step="2" hidden>
-            <div class="ud-field">
-              <label class="ud-label" for="registerEmail">Email</label>
-              <input
-                id="registerEmail"
-                class="ud-input"
-                type="email"
-                autocomplete="email"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-
-            <div class="ud-row">
-              <button class="ud-btn ud-btn--ghost" type="button" data-register-back>
-                Назад
-              </button>
-
-              <button class="ud-btn" type="button" data-register-next>
-                Далі
-              </button>
-            </div>
-
-            <p class="auth__hint">
-              Email потрібен для відновлення пароля.
-            </p>
-          </div>
-
-          <div class="auth-step" data-register-step="3" hidden>
-            <div class="ud-field">
-              <label class="ud-label" for="registerPassword">Пароль</label>
-              <input
-                id="registerPassword"
-                class="ud-input"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Мінімум 8 символів"
-                minlength="8"
-                maxlength="128"
-                required
-              />
-            </div>
-
-            <div class="ud-field">
-              <label class="ud-label" for="registerPasswordRepeat">Повтор пароля</label>
-              <input
-                id="registerPasswordRepeat"
-                class="ud-input"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Ще раз"
-                minlength="8"
-                maxlength="128"
-                required
-              />
-            </div>
-
-            <div class="ud-row">
-              <button class="ud-btn ud-btn--ghost" type="button" data-register-back>
-                Назад
-              </button>
-
-              <button class="ud-btn" type="submit">
-                Зареєструватися
-              </button>
-            </div>
-          </div>
-
-          <div class="ud-row">
-            <button class="ud-linklike" type="button" data-auth-switch="login">
-              Вже є акаунт? Увійти
-            </button>
-          </div>
-
-          <div id="registerMessage" class="ud-message" hidden></div>
-        </form>
+      <div class="about__card">
+        <div class="about__card-ico">🤝</div>
+        <div class="about__card-t">Consensus</div>
+        <div class="about__card-d">Подія вагома, коли її підтверджують незалежні джерела.</div>
       </div>
-
-      <!-- FORGOT -->
-      <div class="auth-view" data-auth-view="forgot" hidden>
-        <h2 class="ud-title">Відновлення пароля</h2>
-        <p class="ud-sub">Введіть email</p>
-
-        <form id="forgotForm">
-          <div class="ud-field">
-            <label class="ud-label" for="forgotEmail">Email</label>
-            <input
-              id="forgotEmail"
-              class="ud-input"
-              type="email"
-              autocomplete="email"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-
-          <button class="ud-btn ud-btn--block" type="submit">
-            Надіслати відновлення
-          </button>
-
-          <div class="ud-row">
-            <button class="ud-linklike" type="button" data-auth-switch="login">
-              Назад до входу
-            </button>
-          </div>
-
-          <div id="forgotMessage" class="ud-message" hidden></div>
-        </form>
+      <div class="about__card">
+        <div class="about__card-ico">🧠</div>
+        <div class="about__card-t">Regex + AI</div>
+        <div class="about__card-d">Швидкий шар правил та нейромережа для складних повідомлень.</div>
       </div>
-
-      <!-- RESET -->
-      <div class="auth-view" data-auth-view="reset" hidden>
-        <h2 class="ud-title">Новий пароль</h2>
-        <p class="ud-sub">Token + новий пароль</p>
-
-        <form id="resetForm">
-          <div class="ud-field">
-            <label class="ud-label" for="resetToken">Token</label>
-            <input
-              id="resetToken"
-              class="ud-input"
-              type="text"
-              placeholder="reset token"
-              required
-            />
-          </div>
-
-          <div class="ud-field">
-            <label class="ud-label" for="resetPassword">Новий пароль</label>
-            <input
-              id="resetPassword"
-              class="ud-input"
-              type="password"
-              autocomplete="new-password"
-              placeholder="Мінімум 8 символів"
-              minlength="8"
-              maxlength="128"
-              required
-            />
-          </div>
-
-          <div class="ud-field">
-            <label class="ud-label" for="resetPasswordRepeat">Повтор нового пароля</label>
-            <input
-              id="resetPasswordRepeat"
-              class="ud-input"
-              type="password"
-              autocomplete="new-password"
-              placeholder="Ще раз"
-              minlength="8"
-              maxlength="128"
-              required
-            />
-          </div>
-
-          <button class="ud-btn ud-btn--block" type="submit">
-            Змінити пароль
-          </button>
-
-          <div class="ud-row">
-            <button class="ud-linklike" type="button" data-auth-switch="login">
-              Назад до входу
-            </button>
-          </div>
-
-          <div id="resetMessage" class="ud-message" hidden></div>
-        </form>
+      <div class="about__card">
+        <div class="about__card-ico">🗄️</div>
+        <div class="about__card-t">Пам'ять</div>
+        <div class="about__card-d">Події пишуться в базу для звітів та майбутнього датасету.</div>
       </div>
     </div>
-  </div>
-
-  <!-- ============================================================
-       SUPPORT OVERLAY
-       ============================================================ -->
-  <div class="support-overlay" id="supportOverlay" data-open="false">
-    <div class="support-backdrop" data-support-close></div>
-
-    <div class="support" role="dialog" aria-label="Техпідтримка">
-      <button class="support__close" data-support-close>✕</button>
-
-      <h2 class="ud-title">Техпідтримка</h2>
-      <p class="ud-sub">Звернення та відповіді</p>
-
-      <div id="supportAuthRequired" class="admin__empty">
-        Щоб написати в підтримку, потрібно увійти в акаунт.
-        <div class="ud-row">
-          <button class="ud-btn" id="supportGoLoginBtn">
-            Увійти
-          </button>
-        </div>
-      </div>
-
-      <div id="supportApp" hidden>
-        <div class="ud-row ud-row--between">
-          <button class="ud-btn" id="supportNewTicketBtn">
-            ➕ Нове звернення
-          </button>
-
-          <button class="ud-btn ud-btn--ghost" id="supportRefreshBtn">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="supportTicketsList" class="support__list" style="margin-top: 14px;"></div>
-
-        <div id="supportTicketView" hidden>
-          <div class="ud-row ud-row--between">
-            <button class="ud-btn ud-btn--ghost" id="supportBackBtn">
-              ← Назад
-            </button>
-
-            <span id="supportTicketStatus" class="ud-badge">open</span>
-          </div>
-
-          <h3 id="supportTicketSubject" class="ud-title" style="margin-top: 14px; font-size: 18px;">
-            Ticket
-          </h3>
-
-          <div id="supportMessages" class="support-messages"></div>
-
-          <form id="supportMessageForm">
-            <div class="ud-field">
-              <label class="ud-label" for="supportMessageText">Ваше повідомлення</label>
-              <textarea
-                id="supportMessageText"
-                class="ud-textarea"
-                placeholder="Напишіть відповідь або уточнення..."
-                required
-              ></textarea>
-            </div>
-
-            <button class="ud-btn ud-btn--block" type="submit">
-              Відправити
-            </button>
-          </form>
-        </div>
-
-        <form id="supportNewForm" hidden>
-          <div class="ud-field">
-            <label class="ud-label" for="supportCategory">Категорія</label>
-            <select id="supportCategory" class="ud-select">
-              <option value="other">Інше</option>
-              <option value="bug">Помилка сайту</option>
-              <option value="map">Карта</option>
-              <option value="donation">Донат</option>
-              <option value="channel">Канали / джерела</option>
-              <option value="suggestion">Пропозиція</option>
-            </select>
-          </div>
-
-          <div class="ud-field">
-            <label class="ud-label" for="supportSubject">Тема</label>
-            <input
-              id="supportSubject"
-              class="ud-input"
-              type="text"
-              placeholder="Коротко: що сталося"
-              minlength="3"
-              maxlength="120"
-              required
-            />
-          </div>
-
-          <div class="ud-field">
-            <label class="ud-label" for="supportBody">Повідомлення</label>
-            <textarea
-              id="supportBody"
-              class="ud-textarea"
-              placeholder="Опишіть проблему або питання..."
-              minlength="3"
-              maxlength="5000"
-              required
-            ></textarea>
-          </div>
-
-          <div class="ud-row">
-            <button class="ud-btn ud-btn--ghost" type="button" id="supportCancelNewBtn">
-              Назад
-            </button>
-
-            <button class="ud-btn" type="submit">
-              Створити
-            </button>
-          </div>
-        </form>
-      </div>
+    <div class="about__disclaimer">
+      <span>⚠️</span>
+      <span>Це цивільний агрегатор відкритих даних, а не офіційна система сповіщення. Він не замінює повітряну тривогу та офіційні канали.</span>
     </div>
   </div>
+</div>
 
-  <!-- ============================================================
-       DONATE OVERLAY
-       ============================================================ -->
-  <div class="donate-overlay" id="donateOverlay" data-open="false">
-    <div class="donate-backdrop" data-donate-close></div>
-
-    <div class="donate" role="dialog" aria-label="Підтримати проєкт">
-      <button class="donate__close" data-donate-close>✕</button>
-
-      <h2 class="ud-title">Підтримати проєкт</h2>
-      <p class="ud-sub">Банка Ukraine Defender</p>
-
-      <p style="color: var(--ud-muted); line-height: 1.6; font-size: 14px;">
-        Збір іде на розвиток моніторингу, сервери, канали та покращення алгоритмів.
-      </p>
-
-      <div class="ud-row" style="margin-top: 16px;">
-        <a
-          id="donateLink"
-          class="ud-btn"
-          href="https://send.monobank.ua/jar/4tGSchYaiH"
-          target="_blank"
-          rel="noopener"
-        >
-          💛 Відкрити банку
-        </a>
-
-        <button id="donateCopyBtn" class="ud-btn ud-btn--ghost" type="button">
-          Скопіювати посилання
-        </button>
-      </div>
-
-      <div class="donate__url">
-        https://send.monobank.ua/jar/4tGSchYaiH
-      </div>
-
-      <div id="donateMessage" class="ud-message" hidden></div>
+<div class="donate-overlay" id="donateOverlay" data-open="false">
+  <div class="donate-backdrop" data-nav-close="donate"></div>
+  <div class="donate">
+    <div class="rp-head">
+      <span class="ud-title">Підтримати проєкт</span>
+      <button class="rp-close" data-nav-close="donate">✕</button>
+    </div>
+    <p style="color: var(--muted); margin-top: 12px; font-size: 14px;">
+      Збір іде на розвиток моніторингу, сервери та покращення алгоритмів.
+    </p>
+    <div class="ud-row" style="margin-top: 16px;">
+      <a class="ud-btn" href="https://send.monobank.ua/jar/4tGSchYaiH" target="_blank" rel="noopener">💛 Відкрити банку</a>
     </div>
   </div>
+</div>
 
-  <!-- ============================================================
-       ADMIN OVERLAY
-       ============================================================ -->
-  <div class="admin-overlay" id="adminOverlay" data-open="false">
-    <div class="admin-backdrop" data-admin-close></div>
-
-    <div class="admin" role="dialog" aria-label="Адмін-панель">
-      <button class="admin__close" data-admin-close>✕</button>
-
-      <h2 class="ud-title">Адмін-панель</h2>
-      <p class="ud-sub">Керування сервісом</p>
-
-      <div class="admin__tabs">
-        <button class="admin__tab admin__tab--on" data-admin-tab="tickets">
-          Тикети
-        </button>
-
-        <button class="admin__tab" data-admin-tab="users">
-          Користувачі
-        </button>
-
-        <button class="admin__tab" data-admin-tab="sources">
-          Джерела
-        </button>
-
-        <button class="admin__tab" data-admin-tab="reports">
-          Скарги
-        </button>
-
-        <button class="admin__tab" data-admin-tab="logs">
-          Логи
-        </button>
-
-        <button class="admin__tab" data-admin-tab="settings">
-          Налаштування
-        </button>
-
-        <button class="admin__tab" data-admin-tab="analytics">
-          Аналітика
-        </button>
+<div class="auth-overlay" id="authOverlay" data-open="false">
+  <div class="auth-backdrop" data-auth-close></div>
+  <div class="auth">
+    <button class="rp-close" data-auth-close>✕</button>
+    <h2 class="ud-title">Вхід</h2>
+    <p class="ud-sub">Email або нік + пароль</p>
+    <form id="loginForm" style="margin-top: 16px;">
+      <div class="ud-field">
+        <label class="ud-label">Email або нік</label>
+        <input class="ud-input" type="text" required />
       </div>
-
-      <!-- TICKETS -->
-      <div class="admin__pane" data-admin-pane="tickets">
-        <div class="admin__toolbar">
-          <select id="adminTicketFilter" class="ud-select">
-            <option value="">Всі статуси</option>
-            <option value="open">Open</option>
-            <option value="answered">Answered</option>
-            <option value="closed">Closed</option>
-          </select>
-
-          <button class="ud-btn ud-btn--ghost" id="adminTicketsRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminTickets" class="admin__list"></div>
+      <div class="ud-field">
+        <label class="ud-label">Пароль</label>
+        <input class="ud-input" type="password" required />
       </div>
-
-      <!-- USERS -->
-      <div class="admin__pane" data-admin-pane="users" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminUsersRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminUsers" class="admin__list"></div>
-      </div>
-
-      <!-- SOURCES -->
-      <div class="admin__pane" data-admin-pane="sources" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminSourcesRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminSources" class="admin__list"></div>
-      </div>
-
-      <!-- REPORTS -->
-      <div class="admin__pane" data-admin-pane="reports" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminReportsRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminReports" class="admin__list"></div>
-      </div>
-
-      <!-- LOGS -->
-      <div class="admin__pane" data-admin-pane="logs" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminLogsRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminLogs" class="admin__list"></div>
-      </div>
-
-      <!-- SETTINGS -->
-      <div class="admin__pane" data-admin-pane="settings" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminSettingsRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminSettingsList" class="admin__list"></div>
-
-        <form id="adminSettingForm" style="margin-top: 16px;">
-          <div class="ud-field">
-            <label class="ud-label" for="adminSettingKey">Ключ</label>
-            <input
-              id="adminSettingKey"
-              class="ud-input"
-              type="text"
-              placeholder="donation_url"
-              required
-            />
-          </div>
-
-          <div class="ud-field">
-            <label class="ud-label" for="adminSettingValue">Значення</label>
-            <input
-              id="adminSettingValue"
-              class="ud-input"
-              type="text"
-              placeholder="value"
-              required
-            />
-          </div>
-
-          <button class="ud-btn" type="submit">
-            Зберегти налаштування
-          </button>
-        </form>
-      </div>
-
-      <!-- ANALYTICS -->
-      <div class="admin__pane" data-admin-pane="analytics" hidden>
-        <div class="admin__toolbar">
-          <button class="ud-btn ud-btn--ghost" id="adminAnalyticsRefreshBtn" type="button">
-            ↻ Оновити
-          </button>
-        </div>
-
-        <div id="adminAnalyticsSummary" class="admin__stats"></div>
-        <div id="adminAnalyticsExtra" class="admin__list"></div>
-      </div>
-    </div>
+      <button class="ud-btn ud-btn--block" type="submit" style="margin-top: 16px;">Увійти</button>
+    </form>
   </div>
+</div>
 
-  <!-- ============================================================
-       TOASTS
-       ============================================================ -->
-  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+<div class="toast-host" id="toastHost"></div>
 
-  <!-- ============================================================
-       APP ENTRY
-       ============================================================ -->
-  <script type="module" src="/src/main.ts"></script>
+<script type="module" src="/src/main.ts"></script>
 
-  <script>
-    // Fallback, если основной JS не успеет скрыть лоадер.
-    setTimeout(function () {
-      var loader = document.getElementById("loader");
-      if (loader && loader.dataset.hidden !== "true") {
-        loader.dataset.hidden = "true";
-        setTimeout(function () {
-          loader.remove();
-        }, 600);
-      }
-    }, 5000);
-  </script>
 </body>
 </html>
