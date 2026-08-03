@@ -100,11 +100,7 @@ function showToast(
 
   toast.className =
     "toast" +
-    (kind === "warn"
-      ? " toast--warn"
-      : kind === "ok"
-        ? " toast--ok"
-        : "");
+    (kind === "warn" ? " toast--warn" : kind === "ok" ? " toast--ok" : "");
 
   toast.textContent = `${icon} ${text}`;
 
@@ -128,7 +124,6 @@ function showToast(
 // ============================================================
 
 const REGION_FOR_TOPONYM: Record<string, string> = {
-  // KYIV CITY
   kyiv: "kyiv_city",
   troieshchyna: "kyiv_city",
   solomianka: "kyiv_city",
@@ -141,7 +136,6 @@ const REGION_FOR_TOPONYM: Record<string, string> = {
   pozniaky: "kyiv_city",
   desna: "kyiv_city",
 
-  // KYIV OBLAST
   brovary: "kyiv_oblast",
   irpin: "kyiv_oblast",
   bucha: "kyiv_oblast",
@@ -153,84 +147,61 @@ const REGION_FOR_TOPONYM: Record<string, string> = {
   vplyka_dymerska: "kyiv_oblast",
   slavutych: "kyiv_oblast",
 
-  // DNIPRO REGION
   dnipro: "dnipro",
   kryvyi_rih: "dnipro",
   nikopol: "dnipro",
   pavlohrad: "dnipro",
 
-  // KHARKIV
   kharkiv: "kharkiv",
   izium: "kharkiv",
   lozova: "kharkiv",
 
-  // ODESA
   odesa: "odesa",
 
-  // SUMY
   sumy: "sumy",
   okhtyrka: "sumy",
   konotop: "sumy",
   shostka: "sumy",
 
-  // ZAPORIZHZHIA
   zaporizhzhia: "zaporizhzhia",
   melitopol: "zaporizhzhia",
   berdyansk: "zaporizhzhia",
 
-  // MYKOLAIV
   mykolaiv: "mykolaiv",
 
-  // KHERSON
   kherson: "kherson",
 
-  // POLTAVA
   poltava: "poltava",
   kremenchuk: "poltava",
 
-  // CHERKASY
   cherkasy: "cherkasy",
 
-  // CHERNIHIV
   chernihiv: "chernihiv",
 
-  // ZHYTOMYR
   zhytomyr: "zhytomyr",
 
-  // VINNYTSIA
   vinnytsia: "vinnytsia",
 
-  // KHMELNYTSKYI
   khmelnytskyi: "khmelnytskyi",
 
-  // RIVNE
   rivne: "rivne",
 
-  // TERNOPIL
   ternopil: "ternopil",
 
-  // LVIV
   lviv: "lviv",
 
-  // IVANO-FRANKIVSK
   ivano_frankivsk: "ivano_frankivsk",
 
-  // ZAKARPATTIA
   uzhhorod: "zakarpattia",
 
-  // VOLYN
   lutsk: "volyn",
 
-  // DONETSK
   donetsk: "donetsk",
 
-  // LUHANSK
   luhansk: "luhansk",
 
-  // KIROVOHRAD
   kropyvnytskyi: "kirovohrad",
 
-  // CHERNIVTSI
   chernivtsi: "chernivtsi"
 };
 
@@ -265,6 +236,16 @@ function filterEventsByRegion(
   region: string
 ): ThreatEvent[] {
   return events.filter((e) => eventBelongsToRegion(e, region));
+}
+
+// Свежие сверху.
+function sortByNewest(events: ThreatEvent[]): ThreatEvent[] {
+  return [...events].sort((a, b) => {
+    const ta = Date.parse(a.source?.ts || "") || 0;
+    const tb = Date.parse(b.source?.ts || "") || 0;
+
+    return tb - ta;
+  });
 }
 
 // ============================================================
@@ -525,11 +506,7 @@ loginForm.addEventListener("submit", async (event) => {
 
     closeAuthOverlay();
 
-    showToast(
-      t("toast.welcome", { name: user.nickname }),
-      "ok",
-      "🛡️"
-    );
+    showToast(t("toast.welcome", { name: user.nickname }), "ok", "🛡️");
   } catch (error) {
     showMessage(
       loginMessage,
@@ -569,11 +546,7 @@ registerForm.addEventListener("submit", async (event) => {
 
     closeAuthOverlay();
 
-    showToast(
-      t("toast.registered", { name: user.nickname }),
-      "ok",
-      "✅"
-    );
+    showToast(t("toast.registered", { name: user.nickname }), "ok", "✅");
   } catch (error) {
     showMessage(
       registerMessage,
@@ -645,11 +618,7 @@ resetForm.addEventListener("submit", async (event) => {
 
     showAuthView("login");
 
-    showMessage(
-      loginMessage,
-      "Password changed. Please sign in.",
-      true
-    );
+    showMessage(loginMessage, "Password changed. Please sign in.", true);
   } catch (error) {
     showMessage(
       resetMessage,
@@ -705,9 +674,7 @@ document
         const next = toggleLanguage();
 
         if (isAuthenticated()) {
-          void updateProfile({
-            lang: next
-          }).catch(() => {});
+          void updateProfile({ lang: next }).catch(() => {});
         }
 
         return;
@@ -893,7 +860,7 @@ async function pollEvents(): Promise<void> {
 
     if (drawer.isOpen()) {
       drawer.setEvents(
-        filterEventsByRegion(lastEvents, region)
+        sortByNewest(filterEventsByRegion(lastEvents, region))
       );
     }
   } catch (error) {
@@ -935,11 +902,7 @@ async function poll(): Promise<void> {
 
     console.error("poll failed", message);
 
-    showToast(
-      "Не вдалося отримати тривоги. Перевір DATA_API_URL у auth-worker.",
-      "warn",
-      "⚠️"
-    );
+    showToast("Не вдалося отримати тривоги", "warn", "⚠️");
   }
 }
 
