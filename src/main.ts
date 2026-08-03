@@ -44,13 +44,12 @@ async function init() {
     const r = lastAlerts?.regions.find((x) => x.key === key);
     if (r) {
       drawer.open(r);
-      if (r.alert) void pollEvents(key);
+      if (r.active) void pollEvents(key);
     }
   });
 
   setupNavigation();
   setupKeyboard();
-  setupUserArea();
 
   // Первый poll
   await pollAlerts();
@@ -74,10 +73,22 @@ async function pollAlerts() {
 
     console.log(`[UD] Alerts: ${data.active_alerts} active out of ${data.regions.length}`);
 
-    // 🔥 ГЛАВНОЕ: обновляем карту и status strip
+    // 🔥 ОБНОВЛЯЕМ КАРТУ
     map.updateAlerts(data.regions);
+    
+    // 🔥 ОБНОВЛЯЕМ STATUS STRIP
     updateStatusStrip(data.regions);
-    drawer.updateAlerts(data.regions);
+    
+    // 🔥 ОБНОВЛЯЕМ DRAWER (если открыт)
+    if (drawer.isOpen()) {
+      const currentKey = drawer.currentKey();
+      if (currentKey) {
+        const updatedRegion = data.regions.find(r => r.key === currentKey);
+        if (updatedRegion) {
+          drawer.updateRegion(updatedRegion);
+        }
+      }
+    }
 
   } catch (e) {
     console.error("[UD] Alert poll failed:", e);
@@ -93,10 +104,12 @@ async function pollEvents(region = "kyiv") {
     console.log(`[UD] Events: ${data.events_count}`);
 
     map.updateEvents(data.events);
-    drawer.updateEvents(data.events);
+    drawer.setEvents(data.events);
 
   } catch (e) {
     console.error("[UD] Event poll failed:", e);
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    drawer.setError(msg);
     toast({ text: "Не вдалося отримати події", kind: "warn" });
   }
 }
@@ -134,11 +147,10 @@ function startPolling() {
 }
 
 // ============================================================
-// NAVIGATION — РАБОТАЕТ С ОРИГИНАЛЬНЫМИ OVERLAY
+// NAVIGATION
 // ============================================================
 
 function setupNavigation() {
-  // Навигация через data-nav
   document.querySelectorAll("[data-nav]").forEach(btn => {
     btn.addEventListener("click", () => {
       const target = (btn as HTMLElement).dataset.nav;
@@ -153,7 +165,6 @@ function setupNavigation() {
     });
   });
 
-  // Закрытие overlay'ев через крестики
   document.querySelectorAll(
     "[data-nav-close], [data-auth-close], [data-support-close], [data-donate-close], [data-admin-close]"
   ).forEach(btn => {
@@ -163,7 +174,6 @@ function setupNavigation() {
     });
   });
 
-  // Закрытие overlay'ев через клик на backdrop
   document.querySelectorAll(
     ".report-overlay__backdrop, .about-overlay__backdrop, .auth-backdrop, .support-backdrop, .donate-backdrop, .admin-backdrop"
   ).forEach(el => {
@@ -181,65 +191,6 @@ function setupKeyboard() {
         (el as HTMLElement).dataset.open = "false";
       });
     }
-  });
-}
-
-function setupUserArea() {
-  const loginBtn = document.getElementById("loginOpenBtn");
-  const userArea = document.getElementById("userArea");
-  const userMenuBtn = document.getElementById("userMenuBtn");
-
-  loginBtn?.addEventListener("click", () => {
-    const overlay = document.getElementById("authOverlay");
-    if (overlay) (overlay as HTMLElement).dataset.open = "true";
-  });
-
-  userMenuBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (userArea) {
-      const ua = userArea as HTMLElement;
-      ua.dataset.open = ua.dataset.open === "true" ? "false" : "true";
-    }
-  });
-
-  // Закрытие меню при клике вне
-  document.addEventListener("click", (e) => {
-    if (userArea && !userArea.contains(e.target as Node)) {
-      (userArea as HTMLElement).dataset.open = "false";
-    }
-  });
-
-  // Обработка действий в user menu через CustomEvent
-  document.querySelectorAll("[data-user-action]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const action = (btn as HTMLElement).dataset.userAction;
-      if (userArea) (userArea as HTMLElement).dataset.open = "false";
-
-      // Dispatch custom events для модулей (auth, theme, etc.)
-      switch (action) {
-        case "theme":
-          window.dispatchEvent(new CustomEvent("ud:toggle-theme"));
-          break;
-        case "lang":
-          window.dispatchEvent(new CustomEvent("ud:toggle-lang"));
-          break;
-        case "support":
-          const supportOverlay = document.getElementById("supportOverlay");
-          if (supportOverlay) (supportOverlay as HTMLElement).dataset.open = "true";
-          break;
-        case "donate":
-          const donateOverlay = document.getElementById("donateOverlay");
-          if (donateOverlay) (donateOverlay as HTMLElement).dataset.open = "true";
-          break;
-        case "admin":
-          const adminOverlay = document.getElementById("adminOverlay");
-          if (adminOverlay) (adminOverlay as HTMLElement).dataset.open = "true";
-          break;
-        case "logout":
-          window.dispatchEvent(new CustomEvent("ud:logout"));
-          break;
-      }
-    });
   });
 }
 
@@ -337,7 +288,6 @@ function hideLoader() {
   setTimeout(() => loader.remove(), 600);
 }
 
-// Fallback если init завис
 setTimeout(() => {
   const loader = document.getElementById("loader");
   if (loader && (loader as HTMLElement).dataset.hidden !== "true") {
