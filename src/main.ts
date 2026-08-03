@@ -9,6 +9,10 @@ let pollTimer: number | null = null;
 let drawer: Drawer;
 let map: ThreatMap;
 
+// ============================================================
+// ERROR HANDLING
+// ============================================================
+
 window.addEventListener("unhandledrejection", (e) => {
   console.error("[UD] Unhandled rejection:", e.reason);
   toast({ text: "Сталася помилка. Спробуйте оновити сторінку.", kind: "warn" });
@@ -18,6 +22,10 @@ window.addEventListener("error", (e) => {
   console.error("[UD] Global error:", e.error);
   toast({ text: "Непередбачена помилка", kind: "warn" });
 });
+
+// ============================================================
+// INIT
+// ============================================================
 
 async function init() {
   console.log("[UD] Initializing Ukraine Defender...");
@@ -47,6 +55,10 @@ async function init() {
   hideLoader();
 }
 
+// ============================================================
+// POLLING
+// ============================================================
+
 async function pollAlerts() {
   try {
     const data = await fetchAlerts();
@@ -54,7 +66,6 @@ async function pollAlerts() {
 
     console.log(`[UD] Alerts: ${data.active_alerts} active out of ${data.regions.length}`);
 
-    // 🔥 ГЛАВНОЕ: обновляем карту и status strip
     map.updateAlerts(data.regions);
     updateStatusStrip(data.regions);
     drawer.updateAlerts(data.regions);
@@ -90,10 +101,10 @@ function updateStatusStrip(regions: Region[]) {
   const alerts = regions.filter(r => r.alert);
 
   if (alerts.length === 0) {
-    strip.dataset.state = "calm";
+    (strip as HTMLElement).dataset.state = "calm";
     text.textContent = "УСЕ ЧИСТО · ТРИМАЙМОСЬ";
   } else {
-    strip.dataset.state = "alert";
+    (strip as HTMLElement).dataset.state = "alert";
     const names = alerts.slice(0, 3).map(r => r.name_uk).join(", ");
     const suffix = alerts.length > 3 ? "..." : "";
     text.textContent = `🚨 ТРИВОГА В ${alerts.length} РЕГІОНАХ: ${names}${suffix}`;
@@ -109,6 +120,10 @@ function startPolling() {
   }, 15000);
 }
 
+// ============================================================
+// NAVIGATION
+// ============================================================
+
 function setupNavigation() {
   document.querySelectorAll("[data-nav]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -116,7 +131,7 @@ function setupNavigation() {
       if (!target) return;
 
       const overlay = document.getElementById(`${target}Overlay`);
-      if (overlay) overlay.dataset.open = "true";
+      if (overlay) (overlay as HTMLElement).dataset.open = "true";
 
       if (target === "report") {
         void openReport();
@@ -124,17 +139,21 @@ function setupNavigation() {
     });
   });
 
+  // Закрытие overlay'ев через крестик
   document.querySelectorAll("[data-nav-close], [data-auth-close]").forEach(btn => {
     btn.addEventListener("click", () => {
       const overlay = btn.closest("[data-open]");
-      if (overlay) overlay.dataset.open = "false";
+      if (overlay) (overlay as HTMLElement).dataset.open = "false";
     });
   });
 
-  document.querySelectorAll(".report-overlay__backdrop, .about-overlay__backdrop, .auth-backdrop, .donate-backdrop").forEach(el => {
+  // Закрытие overlay'ев через клик на backdrop
+  document.querySelectorAll(
+    ".report-overlay__backdrop, .about-overlay__backdrop, .auth-backdrop, .donate-backdrop"
+  ).forEach(el => {
     el.addEventListener("click", () => {
       const overlay = el.closest("[data-open]");
-      if (overlay) overlay.dataset.open = "false";
+      if (overlay) (overlay as HTMLElement).dataset.open = "false";
     });
   });
 }
@@ -156,22 +175,40 @@ function setupUserArea() {
 
   loginBtn?.addEventListener("click", () => {
     const overlay = document.getElementById("authOverlay");
-    if (overlay) overlay.dataset.open = "true";
+    if (overlay) (overlay as HTMLElement).dataset.open = "true";
   });
 
   userMenuBtn?.addEventListener("click", () => {
     if (userArea) {
-      userArea.dataset.open = userArea.dataset.open === "true" ? "false" : "true";
+      const ua = userArea as HTMLElement;
+      ua.dataset.open = ua.dataset.open === "true" ? "false" : "true";
+    }
+  });
+
+  // Закрытие меню при клике вне
+  document.addEventListener("click", (e) => {
+    if (userArea && !userArea.contains(e.target as Node)) {
+      (userArea as HTMLElement).dataset.open = "false";
     }
   });
 }
+
+// ============================================================
+// REPORT OVERLAY
+// ============================================================
 
 async function openReport() {
   const card = document.getElementById("reportCard");
   if (!card) return;
 
   if (!lastAlerts) {
-    card.innerHTML = `<div class="rp-head"><span class="ud-title">Звіт</span><button class="rp-close" onclick="document.getElementById('reportOverlay').dataset.open='false'">✕</button></div><p class="ud-sub">Завантаження...</p>`;
+    card.innerHTML = `
+      <div class="rp-head">
+        <span class="ud-title">Звіт</span>
+        <button class="rp-close" onclick="document.getElementById('reportOverlay').dataset.open='false'">✕</button>
+      </div>
+      <p class="ud-sub">Завантаження...</p>
+    `;
     return;
   }
 
@@ -210,20 +247,29 @@ async function openReport() {
   `;
 }
 
+// ============================================================
+// LOADER
+// ============================================================
+
 function hideLoader() {
   const loader = document.getElementById("loader");
   if (!loader) return;
 
-  loader.dataset.hidden = "true";
+  (loader as HTMLElement).dataset.hidden = "true";
   setTimeout(() => loader.remove(), 600);
 }
 
+// Fallback если init завис
 setTimeout(() => {
   const loader = document.getElementById("loader");
-  if (loader && loader.dataset.hidden !== "true") {
-    loader.dataset.state = "error";
+  if (loader && (loader as HTMLElement).dataset.hidden !== "true") {
+    (loader as HTMLElement).dataset.state = "error";
   }
 }, 8000);
+
+// ============================================================
+// TOAST
+// ============================================================
 
 export function toast(opts: { text: string; kind?: "info" | "warn" | "ok" }) {
   const host = document.getElementById("toastHost");
@@ -240,6 +286,10 @@ export function toast(opts: { text: string; kind?: "info" | "warn" | "ok" }) {
   }, 3000);
 }
 
+// ============================================================
+// CLOCK
+// ============================================================
+
 function updateClock() {
   const clock = document.getElementById("clock");
   if (!clock) return;
@@ -251,6 +301,10 @@ function updateClock() {
 
 setInterval(updateClock, 1000);
 updateClock();
+
+// ============================================================
+// START
+// ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   void init();
