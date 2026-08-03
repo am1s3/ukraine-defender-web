@@ -1,11 +1,19 @@
 import L from "leaflet";
 import type { Region, ThreatEvent } from "./types";
 
+// ============================================================
+// ЦВЕТА РЕГИОНОВ
+// ============================================================
+
 const REGION_COLORS = {
   calm: { fill: "#1e3a5f", stroke: "#35c4ff", opacity: 0.4 },
   alert: { fill: "#ff3b3b", stroke: "#ff6b6b", opacity: 0.7 },
   unknown: { fill: "#2a2a3e", stroke: "#4a4a5e", opacity: 0.3 }
 };
+
+// ============================================================
+// КООРДИНАТЫ ОБЛАСТНЫХ ЦЕНТРОВ
+// ============================================================
 
 const REGION_CENTERS: Record<string, [number, number]> = {
   kyiv_city: [50.4501, 30.5234],
@@ -36,6 +44,10 @@ const REGION_CENTERS: Record<string, [number, number]> = {
   crimea: [44.9521, 34.1024]
 };
 
+// ============================================================
+// THREAT MAP CLASS
+// ============================================================
+
 export class ThreatMap {
   private map: L.Map;
   private regionLayers: Map<string, L.Circle> = new Map();
@@ -52,11 +64,13 @@ export class ThreatMap {
       attributionControl: false
     });
 
+    // Тёмный tile слой
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
       maxZoom: 19
     }).addTo(this.map);
 
     this.eventMarkers = L.layerGroup().addTo(this.map);
+
     this.createRegionCircles();
   }
 
@@ -76,6 +90,7 @@ export class ThreatMap {
     }
   }
 
+  // 🔥 ГЛАВНЫЙ МЕТОД: обновление цветов регионов по тривогам
   updateAlerts(regions: Region[]) {
     console.log(`[Map] Updating ${regions.length} regions, ${regions.filter(r => r.alert).length} alerts`);
 
@@ -92,17 +107,20 @@ export class ThreatMap {
         weight: region.alert ? 4 : 2
       });
 
+      // 🔧 FIX: кастим к HTMLElement для доступа к style
       const el = layer.getElement();
       if (el) {
+        const htmlEl = el as HTMLElement;
         if (region.alert) {
-          el.style.animation = "regionPulse 1.5s ease-in-out infinite";
+          htmlEl.style.animation = "regionPulse 1.5s ease-in-out infinite";
         } else {
-          el.style.animation = "none";
+          htmlEl.style.animation = "none";
         }
       }
     }
   }
 
+  // Показать события на карте
   updateEvents(events: ThreatEvent[]) {
     this.eventMarkers.clearLayers();
 
