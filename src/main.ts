@@ -1,15 +1,7 @@
-import { fetchAlerts, fetchEvents, fetchNight } from "./api";
+import { fetchAlerts, fetchEvents } from "./api";
 import { ThreatMap } from "./map";
 import { Drawer } from "./panel";
-import { SummaryOverlay } from "./summary";
-import { initAuth, onAuthStateChange } from "./auth";
-import { initLoader } from "./loader";
-import { initTheme } from "./theme";
-import { initSupport } from "./support";
-import { initDonate } from "./donate";
-import { initAdmin } from "./admin";
-import { initI18n } from "./i18n";
-import type { AlertResponse, ThreatEvent, NightResponse, Region } from "./types";
+import type { AlertResponse, ThreatEvent, Region } from "./types";
 
 // ============================================================
 // GLOBAL STATE
@@ -17,11 +9,9 @@ import type { AlertResponse, ThreatEvent, NightResponse, Region } from "./types"
 
 let lastAlerts: AlertResponse | null = null;
 let lastEvents: ThreatEvent[] = [];
-let lastNight: NightResponse | null = null;
 let pollTimer: number | null = null;
 let drawer: Drawer;
 let map: ThreatMap;
-let summaryOverlay: SummaryOverlay;
 
 // ============================================================
 // ERROR HANDLING
@@ -43,16 +33,6 @@ window.addEventListener("error", (e) => {
 
 async function init() {
   console.log("[UD] Initializing Ukraine Defender...");
-
-  // Инициализация всех модулей (сохраняем оригинальный функционал)
-  initTheme();
-  initI18n();
-  initAuth();
-  initSupport();
-  initDonate();
-  initAdmin();
-
-  summaryOverlay = new SummaryOverlay();
 
   drawer = new Drawer({
     onHoverToponym: (key) => map.setHighlight(key),
@@ -80,7 +60,7 @@ async function init() {
   startPolling();
 
   // Скрываем loader
-  initLoader();
+  hideLoader();
 }
 
 // ============================================================
@@ -208,42 +188,40 @@ function setupUserArea() {
   const loginBtn = document.getElementById("loginOpenBtn");
   const userArea = document.getElementById("userArea");
   const userMenuBtn = document.getElementById("userMenuBtn");
-  const userMenu = document.getElementById("userMenu");
 
   loginBtn?.addEventListener("click", () => {
     const overlay = document.getElementById("authOverlay");
     if (overlay) (overlay as HTMLElement).dataset.open = "true";
   });
 
-  userMenuBtn?.addEventListener("click", () => {
-    if (userMenu) {
-      userMenu.style.display = userMenu.style.display === "block" ? "none" : "block";
+  userMenuBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (userArea) {
+      const ua = userArea as HTMLElement;
+      ua.dataset.open = ua.dataset.open === "true" ? "false" : "true";
     }
   });
 
   // Закрытие меню при клике вне
   document.addEventListener("click", (e) => {
-    if (userArea && !userArea.contains(e.target as Node) && userMenu) {
-      userMenu.style.display = "none";
+    if (userArea && !userArea.contains(e.target as Node)) {
+      (userArea as HTMLElement).dataset.open = "false";
     }
   });
 
-  // Обработка действий в user menu
+  // Обработка действий в user menu через CustomEvent
   document.querySelectorAll("[data-user-action]").forEach(btn => {
     btn.addEventListener("click", () => {
       const action = (btn as HTMLElement).dataset.userAction;
-      if (userMenu) userMenu.style.display = "none";
+      if (userArea) (userArea as HTMLElement).dataset.open = "false";
 
+      // Dispatch custom events для модулей (auth, theme, etc.)
       switch (action) {
         case "theme":
-          // theme.ts должен экспортировать toggleTheme
-          const event = new CustomEvent("ud:toggle_theme");
-          window.dispatchEvent(event);
+          window.dispatchEvent(new CustomEvent("ud:toggle-theme"));
           break;
-        case "logout":
-          // auth.ts должен экспортировать logout
-          const logoutEvent = new CustomEvent("ud:logout");
-          window.dispatchEvent(logoutEvent);
+        case "lang":
+          window.dispatchEvent(new CustomEvent("ud:toggle-lang"));
           break;
         case "support":
           const supportOverlay = document.getElementById("supportOverlay");
@@ -257,9 +235,8 @@ function setupUserArea() {
           const adminOverlay = document.getElementById("adminOverlay");
           if (adminOverlay) (adminOverlay as HTMLElement).dataset.open = "true";
           break;
-        case "lang":
-          const langEvent = new CustomEvent("ud:toggle_lang");
-          window.dispatchEvent(langEvent);
+        case "logout":
+          window.dispatchEvent(new CustomEvent("ud:logout"));
           break;
       }
     });
@@ -347,6 +324,26 @@ async function openReport() {
     ` : ""}
   `;
 }
+
+// ============================================================
+// LOADER
+// ============================================================
+
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  if (!loader) return;
+
+  (loader as HTMLElement).dataset.hidden = "true";
+  setTimeout(() => loader.remove(), 600);
+}
+
+// Fallback если init завис
+setTimeout(() => {
+  const loader = document.getElementById("loader");
+  if (loader && (loader as HTMLElement).dataset.hidden !== "true") {
+    (loader as HTMLElement).dataset.state = "error";
+  }
+}, 8000);
 
 // ============================================================
 // TOAST
