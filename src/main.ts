@@ -78,17 +78,6 @@ async function pollAlerts() {
     
     // 🔥 ОБНОВЛЯЕМ STATUS STRIP
     updateStatusStrip(data.regions);
-    
-    // 🔥 ОБНОВЛЯЕМ DRAWER (если открыт)
-    if (drawer.isOpen()) {
-      const currentKey = drawer.currentKey();
-      if (currentKey) {
-        const updatedRegion = data.regions.find(r => r.key === currentKey);
-        if (updatedRegion) {
-          drawer.updateRegion(updatedRegion);
-        }
-      }
-    }
 
   } catch (e) {
     console.error("[UD] Alert poll failed:", e);
@@ -104,12 +93,9 @@ async function pollEvents(region = "kyiv") {
     console.log(`[UD] Events: ${data.events_count}`);
 
     map.updateEvents(data.events);
-    drawer.setEvents(data.events);
 
   } catch (e) {
     console.error("[UD] Event poll failed:", e);
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    drawer.setError(msg);
     toast({ text: "Не вдалося отримати події", kind: "warn" });
   }
 }
@@ -253,26 +239,6 @@ async function openReport() {
         ✅ Наразі тривог немає
       </p>
     `}
-    ${lastEvents.length > 0 ? `
-      <h3 style="font-family: var(--font-display); font-size: 14px; margin: 16px 0 10px;">ОСТАННІ ПОДІЇ:</h3>
-      <div style="max-height: 300px; overflow-y: auto;">
-        ${lastEvents.slice(0, 10).map(ev => `
-          <div style="padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-family: var(--font-display); font-size: 12px; font-weight: 600; color: var(--cyan);">
-                ${ev.threat_type.toUpperCase()}
-              </span>
-              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--muted);">
-                ${ev.source.channel}
-              </span>
-            </div>
-            <div style="font-size: 13px; margin-top: 4px; color: var(--text);">
-              ${ev.count ? `<b>${ev.count}</b> шт. ` : ""}${ev.toponym_raw || ev.toponym_key || "—"}
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    ` : ""}
   `;
 }
 
