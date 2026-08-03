@@ -1,17 +1,6 @@
 // ============================================================
 // Ukraine Defender — main.ts
 // FULL FILE
-//
-// Головний вхід:
-// - карта / тривоги / події / звіт;
-// - loader;
-// - auth UI;
-// - theme / i18n;
-// - support / admin / donate;
-// - user menu;
-// - polling;
-// - лента цілей КОНКРЕТНО по області;
-// - service worker.
 // ============================================================
 
 import "./style.css";
@@ -22,17 +11,9 @@ import {
   fetchNight
 } from "./api";
 
-import {
-  ThreatMap
-} from "./map";
-
-import {
-  Drawer
-} from "./panel";
-
-import {
-  SummaryOverlay
-} from "./summary";
+import { ThreatMap } from "./map";
+import { Drawer } from "./panel";
+import { SummaryOverlay } from "./summary";
 
 import type {
   AlertResponse,
@@ -819,8 +800,6 @@ document
         openSupport();
         return;
       }
-
-      // donate навешен в donate.ts
     });
   });
 
@@ -910,8 +889,134 @@ async function pollEvents(): Promise<void> {
 
     lastEvents = data.events;
 
-    // Траєкторії — глобальні.
     map?.setTrajectories(lastEvents);
 
     if (drawer.isOpen()) {
-      // Лента — конкрет
+      drawer.setEvents(
+        filterEventsByRegion(lastEvents, region)
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    console.error("events failed", message);
+
+    if (drawer.isOpen()) {
+      drawer.setError(message);
+    }
+
+    showToast("Не вдалося отримати події", "warn", "⚠️");
+  }
+}
+
+async function poll(): Promise<void> {
+  try {
+    const data = await fetchAlerts();
+
+    lastData = data;
+
+    map?.render(data.regions);
+
+    updateStatusStrip(data);
+
+    const openKey = drawer.currentKey();
+
+    if (openKey) {
+      const region = data.regions.find((x) => x.key === openKey);
+
+      if (region) {
+        drawer.updateRegion(region);
+      }
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    console.error("poll failed", message);
+
+    showToast(
+      "Не вдалося отримати тривоги. Перевір DATA_API_URL у auth-worker.",
+      "warn",
+      "⚠️"
+    );
+  }
+}
+
+// ============================================================
+// MAP INIT
+// ============================================================
+
+map = new ThreatMap("map", (key) => {
+  const region = lastData?.regions.find((x) => x.key === key);
+
+  if (region) {
+    drawer.open(region);
+
+    void pollEvents();
+  } else {
+    showToast("Дані ще не завантажилися", "warn", "⏳");
+  }
+});
+
+const originalDrawerOpen = drawer.open.bind(drawer);
+
+drawer.open = (region) => {
+  originalDrawerOpen(region);
+
+  map?.clearPin();
+
+  void pollEvents();
+};
+
+const originalDrawerClose = drawer.close.bind(drawer);
+
+drawer.close = () => {
+  originalDrawerClose();
+
+  map?.clearPin();
+};
+
+// ============================================================
+// INIT MODULES
+// ============================================================
+
+initLoader();
+
+initI18n();
+
+initTheme();
+
+initSupport();
+
+initAdmin();
+
+initDonate();
+
+void initAuth().then(() => {
+  renderAuthState();
+});
+
+renderAuthState();
+
+void poll();
+
+void pollEvents();
+
+setInterval(() => {
+  void poll();
+}, 5000);
+
+setInterval(() => {
+  void pollEvents();
+}, 12000);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("sw register failed", error);
+    });
+  });
+}
+
+markLoaderReady();
