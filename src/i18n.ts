@@ -162,7 +162,7 @@ const uk: Dictionary = {
   "donate.text":
     "Збір іде на розвиток моніторингу, сервери, канали та покращення алгоритмів.",
 
-  "donate.open": "💛 Відкрити банку",
+  "donate.open": "Open",
   "donate.copy": "Скопіювати посилання",
 
   "donate.copied": "Посилання скопійовано.",
@@ -363,7 +363,7 @@ const en: Dictionary = {
   "donate.text":
     "Donations go to monitoring development, servers, channels and algorithm improvements.",
 
-  "donate.open": "💛 Open jar",
+  "donate.open": "Open",
   "donate.copy": "Copy link",
 
   "donate.copied": "Link copied.",
@@ -626,7 +626,10 @@ export interface StatusStripParams {
 export function translateStatusStrip(
   params: StatusStripParams
 ): string {
-  const active = pluralize("status.activeRegions", params.activeAlerts);
+  const active = pluralize(
+    "status.activeRegions",
+    params.activeAlerts
+  );
 
   if (params.kyivAlert) {
     return `${translate("status.alertKyiv")} · ${active}`;
